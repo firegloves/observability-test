@@ -13,14 +13,7 @@
       "get": {
         "responses": {
           "200": {
-            "description": "Default Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
+            "description": "Default Response"
           }
         }
       }

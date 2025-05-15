@@ -70,16 +70,16 @@ export async function start() {
 	await app.after();
 
 	// Define routes
-	app.route({
-		method: "GET",
-		url: "/health",
-		schema: {
-			response: {
-				200: z.string(),
-			},
-		},
-		handler: async (_, __) => "Ok",
-	});
+	// app.route({
+	// 	method: "GET",
+	// 	url: "/health",
+	// 	schema: {
+	// 		response: {
+	// 			200: z.string(),
+	// 		},
+	// 	},
+	// 	handler: async (_, __) => "Ok",
+	// });
 	app.register(routes);
 
 	// Wait until app is ready to start listening
