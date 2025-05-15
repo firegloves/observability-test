@@ -1,0 +1,16 @@
+services:
+  observability-test-db:
+    image: postgres:17
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: library_user
+      POSTGRES_PASSWORD: library_password
+      POSTGRES_DB: library_service
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080

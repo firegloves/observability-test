@@ -1,0 +1,81 @@
+{
+	"name": "observability-test",
+	"version": "1.0.0",
+	"description": "Observability Test API",
+	"type": "module",
+	"main": "index.ts",
+	"keywords": [],
+	"author": "",
+	"license": "UNLICENSED",
+	"packageManager": "pnpm@10.9.0",
+	"engines": {
+		"node": "22.x"
+	},
+	"private": true,
+	"scripts": {
+		"prepare": "husky",
+		"biome:format": "npx @biomejs/biome format --write ./src",
+		"biome:lint": "npx @biomejs/biome lint --write ./src",
+		"biome:check": "npx @biomejs/biome check --write ./src",
+		"build": "esbuild src/index.ts --bundle --packages=external --sourcemap --platform=node --outfile=dist/index.js --format=esm",
+		"start": "node --env-file=.env dist/index.js",
+		"dev:tsc": "tsc --watch --preserveWatchOutput",
+		"dev:node": "tsx --env-file=.env --watch src/index.ts",
+		"dev:esbuild": "pnpm run build --watch",
+		"dev": "run-s db:up db:wait db:migrate db:seed && run-p dev:*",
+		"db:wait": "tsx scripts/wait-for-db.ts",
+		"db:up": "docker-compose up -d observability-test-db",
+		"db:down": "docker-compose down",
+		"db:migrate": "tsx src/db/postgres/migrate.ts",
+		"db:seed": "tsx src/db/postgres/seed/seed.ts",
+		"test": "vitest",
+		"test:e2e": "run-s db:up db:wait db:migrate test",
+		"test:ci": "run-s db:wait db:migrate test"
+	},
+	"dependencies": {
+		"@fastify/awilix": "^7.0.0",
+		"@fastify/otel": "github:fastify/otel",
+		"@fastify/postgres": "^6.0.2",
+		"@fastify/swagger": "^9.5.0",
+		"@fastify/swagger-ui": "^5.2.2",
+		"@opentelemetry/api": "^1.9.0",
+		"@opentelemetry/auto-instrumentations-node": "^0.58.1",
+		"@opentelemetry/exporter-logs-otlp-http": "^0.200.0",
+		"@opentelemetry/exporter-metrics-otlp-http": "^0.200.0",
+		"@opentelemetry/exporter-otlp-http": "^0.26.0",
+		"@opentelemetry/exporter-trace-otlp-http": "^0.200.0",
+		"@opentelemetry/resources": "^2.0.0",
+		"@opentelemetry/sdk-logs": "^0.200.0",
+		"@opentelemetry/sdk-metrics": "^2.0.0",
+		"@opentelemetry/sdk-node": "^0.200.0",
+		"@opentelemetry/sdk-trace-node": "^2.0.0",
+		"@opentelemetry/semantic-conventions": "^1.32.0",
+		"@types/pg": "^8.11.14",
+		"awilix": "^12.0.5",
+		"bcrypt": "^5.1.1",
+		"fastify": "^5.3.2",
+		"fastify-plugin": "^5.0.1",
+		"fastify-type-provider-zod": "^4.0.2",
+		"oxide.ts": "^1.1.0",
+		"pg": "^8.15.6",
+		"postgrator": "^8.0.0",
+		"tsx": "^4.19.4",
+		"zod": "^3.24.3"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "1.9.4",
+		"@types/bcrypt": "^5.0.2",
+		"@types/node": "^22.14.1",
+		"esbuild": "^0.25.3",
+		"husky": "^9.1.7",
+		"is-port-reachable": "^4.0.0",
+		"lint-staged": "^15.5.1",
+		"npm-run-all": "^4.1.5",
+		"typescript": "^5.8.3"
+	},
+	"lint-staged": {
+		"*.{js,ts,jsx,tsx,json}": [
+			"npx @biomejs/biome check --apply --no-errors-on-unmatched"
+		]
+	}
+}
