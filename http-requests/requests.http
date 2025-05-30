@@ -15,3 +15,47 @@ content-type: application/json
     "rating": 5,
     "comment": "This is a test comment"
 }
+
+###
+
+# Slow endpoint - 1 second delay
+POST http://localhost:8081/v1/performance/slow
+content-type: application/json
+
+{
+    "latency_ms": 1000,
+    "operation_type": "database"
+}
+
+###
+
+# Slow endpoint - 3 second delay
+POST http://localhost:8081/v1/performance/slow
+content-type: application/json
+
+{
+    "latency_ms": 3000,
+    "operation_type": "external_api"
+}
+
+###
+
+# Slow endpoint - minimal delay
+POST http://localhost:8081/v1/performance/slow
+content-type: application/json
+
+{
+    "latency_ms": 100,
+    "operation_type": "computation"
+}
+
+###
+
+# Slow endpoint - maximum delay
+POST http://localhost:8081/v1/performance/slow
+content-type: application/json
+
+{
+    "latency_ms": 5000,
+    "operation_type": "generic"
+}
