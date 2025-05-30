@@ -40,7 +40,7 @@ echo "🌿 Creating feature branch: ${BRANCH_NAME}"
 git checkout -b "${BRANCH_NAME}"
 
 # Commit changes if any
-if [ -n "$(git status --cached --porcelain)" ]; then
+if [ -n "$(git diff --cached --name-only)" ]; then
     echo "💾 Committing changes..."
     git commit -m "feat: ${COMMIT_DETAILS}
 
