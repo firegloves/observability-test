@@ -539,6 +539,203 @@
           }
         }
       }
+    },
+    "/v1/performance/heavy": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "operation_type": {
+                    "type": "string",
+                    "enum": [
+                      "complex_join",
+                      "aggregation",
+                      "stats",
+                      "slow_query"
+                    ],
+                    "default": "complex_join"
+                  },
+                  "limit": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 1000
+                  },
+                  "delay_seconds": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 10
+                  },
+                  "aggregation_type": {
+                    "type": "string",
+                    "enum": [
+                      "rating_analysis",
+                      "author_popularity",
+                      "temporal_analysis",
+                      "generic"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "operation_type": {
+                          "type": "string"
+                        },
+                        "execution_time_ms": {
+                          "type": "number"
+                        },
+                        "data": {},
+                        "metadata": {
+                          "type": "object",
+                          "properties": {
+                            "timestamp": {
+                              "type": "string"
+                            },
+                            "record_count": {
+                              "type": "number"
+                            },
+                            "performance_impact": {
+                              "type": "string",
+                              "enum": [
+                                "low",
+                                "medium",
+                                "high"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "timestamp",
+                            "record_count",
+                            "performance_impact"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "operation_type",
+                        "execution_time_ms",
+                        "metadata"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Resource not found"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "servers": []

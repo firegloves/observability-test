@@ -4,6 +4,7 @@ import { TraceMethod } from "../../observability/spanHelper";
 import { type Book, BOOK_SCHEMA } from "../../domain/entity/Book";
 import type { BookRepo } from "./BookRepo";
 import { handleError } from "../../utils/errorUtils";
+
 const BOOK_TABLE = "books";
 
 export class PostgresBookRepo implements BookRepo {
