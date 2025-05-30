@@ -16,6 +16,12 @@ import {
 	getScenarioWeights,
 } from "../utils/data-generators.js";
 
+// Import database heavy scenario
+import {
+	executeDatabaseHeavyScenario,
+	getDatabaseHeavyThresholds,
+} from "./modules/database-heavy-operations.js";
+
 // Custom metrics for observability comparison
 const customSuccessRate = new Counter("custom_success_requests");
 const customErrorRate = new Counter("custom_error_requests");
@@ -33,6 +39,7 @@ export const options = {
 	],
 	thresholds: {
 		...getThresholds(),
+		...getDatabaseHeavyThresholds(),
 		custom_success_requests: ["rate>0.85"], // 85% success rate
 		slow_endpoint_accuracy: ["p(95)<50"], // Latency accuracy within 50ms
 	},
@@ -58,6 +65,13 @@ export default function () {
 			break;
 		case "error_simulation":
 			executeErrorScenario(session);
+			break;
+		case "database_heavy":
+			executeDatabaseHeavyScenario(session, {
+				successRate: customSuccessRate,
+				errorRate: customErrorRate,
+				endpointResponseTime: endpointResponseTime,
+			});
 			break;
 	}
 
