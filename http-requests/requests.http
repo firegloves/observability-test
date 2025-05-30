@@ -59,3 +59,7 @@ content-type: application/json
     "latency_ms": 5000,
     "operation_type": "generic"
 }
+
+###
+
+http://localhost:8082/v1/simulateError

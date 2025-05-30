@@ -17,6 +17,9 @@ export const GENERIC_ERROR_RESPONSE_SCHEMA = z.object({
 	success: z.literal(false),
 	error: z.string(),
 });
+export type GenericErrorResponse = z.infer<
+	typeof GENERIC_ERROR_RESPONSE_SCHEMA
+>;
 
 export const ERROR_401_RESPONSE_SCHEMA = GENERIC_ERROR_RESPONSE_SCHEMA.extend({
 	error: z.literal("Unauthorized"),

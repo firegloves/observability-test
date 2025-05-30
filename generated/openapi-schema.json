@@ -343,9 +343,174 @@
         }
       }
     },
-    "/v1/simulateError/simulate-error": {
+    "/v1/simulateError/": {
       "get": {
         "responses": {
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/performance/slow": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "latency_ms": {
+                    "type": "number",
+                    "minimum": 100,
+                    "maximum": 5000,
+                    "default": 1000
+                  },
+                  "operation_type": {
+                    "type": "string",
+                    "enum": [
+                      "database",
+                      "external_api",
+                      "computation",
+                      "generic"
+                    ],
+                    "default": "generic"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "requested_latency_ms": {
+                          "type": "number"
+                        },
+                        "actual_duration_ms": {
+                          "type": "number"
+                        },
+                        "operation_type": {
+                          "type": "string"
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "requested_latency_ms",
+                        "actual_duration_ms",
+                        "operation_type",
+                        "timestamp"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Resource not found"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
           "500": {
             "description": "Default Response",
             "content": {

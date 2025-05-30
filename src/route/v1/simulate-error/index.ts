@@ -9,6 +9,7 @@ import {
 	ERROR_404_RESPONSE_SCHEMA,
 	GENERIC_ERROR_RESPONSE_SCHEMA,
 	GENERIC_SUCCESS_RESPONSE_SCHEMA,
+	type GenericErrorResponse,
 } from "../../types";
 import { BOOK_SCHEMA, type Book } from "../../../domain/entity/Book";
 import type {
@@ -35,7 +36,7 @@ const route: FastifyPluginAsync = async (fastify) => {
 	const app = fastify.withTypeProvider<ZodTypeProvider>();
 
 	app.get(
-		"/simulate-error",
+		"/",
 		{
 			schema: {
 				response: {
@@ -43,8 +44,8 @@ const route: FastifyPluginAsync = async (fastify) => {
 				},
 			},
 		},
-		async (request, reply): Promise<void> => {
-			withActiveSpan("SimulateErrorUseCase", async (span) => {
+		async (request, reply): Promise<GenericErrorResponse> => {
+			return withActiveSpan("SimulateErrorUseCase", async (span) => {
 				const error = new Error(
 					"💥 Simulated failure for testing observability",
 				);

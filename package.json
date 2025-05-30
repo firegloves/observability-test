@@ -27,10 +27,7 @@
 		"db:up": "docker-compose up -d observability-test-db",
 		"db:down": "docker-compose down",
 		"db:migrate": "tsx src/db/postgres/migrate.ts",
-		"db:seed": "tsx src/db/postgres/seed/seed.ts",
-		"test": "vitest",
-		"test:e2e": "run-s db:up db:wait db:migrate test",
-		"test:ci": "run-s db:wait db:migrate test"
+		"db:seed": "tsx src/db/postgres/seed/seed.ts"
 	},
 	"dependencies": {
 		"@fastify/awilix": "^7.0.0",

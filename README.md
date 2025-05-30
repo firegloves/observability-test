@@ -18,7 +18,7 @@ The main directories within `src` reflect this structure:
     *   `entity`: Defines the core domain objects (aggregates, entities, value objects).
     *   `use-case`: Implements the application-specific business rules and orchestrates domain entities.
 *   `app`: Orchestrates the use cases by coordinating the domain layer and the infrastructure adapters. It also includes the server setup (`server.ts`) and DI container configuration (`container.ts`).
-*   `repository`: Contains the infrastructure implementations (adapters) for data persistence (e.g., `PostgresBasicAuthUserRepo`).
+*   `repository`: Contains the infrastructure implementations (adapters) for data persistence (e.g., `PostgresBookRepo`).
 *   `route`: Defines the API endpoints and handles incoming requests, acting as primary adapters (input adapters).
 *   `db`: Includes database migration scripts and seeding logic.
 *   `utils`: Holds shared utility functions.
@@ -95,24 +95,6 @@ To run the application in production mode:
 
 This requires a `.env` file to be configured with appropriate production values (especially for the database) and assumes a PostgreSQL database is running and accessible based on the environment variables.
 
-## Running Tests
-
-This project uses [Vitest](https://vitest.dev/) as the test framework.
-
-To run the test suite (unit and integration tests):
-
-```bash
-pnpm test
-```
-
-To run end-to-end tests, which require a running database (automatically managed via Docker Compose):
-
-```bash
-pnpm test:e2e
-```
-
-Ensure Docker is running before executing the `test:e2e` command.
-
 ## API Documentation
 
 This service uses Fastify with `@fastify/swagger` and `@fastify/swagger-ui` to provide API documentation.
@@ -153,6 +135,97 @@ When the application is running in development mode (`pnpm dev`), you can access
 Replace `PORT` with the actual port the server is running on (default is `8080`).
 
 Additionally, when `NODE_ENV` is not set to `production`, the OpenAPI specification file is automatically generated and saved to the path specified by the `OPENAPI_SPEC_FILE_DESTINATION` environment variable (default: `generated/openapi-schema.json`).
+
+## Load Testing with k6
+
+This project includes a comprehensive **k6 load testing infrastructure** designed to generate realistic observability data for testing monitoring platforms like SignOz and GCP.
+
+### Overview
+
+The k6 setup provides:
+- **Realistic user scenarios**: Read-heavy operations, write operations, performance testing, and error simulation
+- **Multiple environments**: Local, staging, and production configurations
+- **Custom metrics**: Performance tracking and observability validation
+- **Weighted scenarios**: Simulates realistic user behavior patterns (60% reads, 25% writes, 10% performance tests, 5% errors)
+- **Think times**: Human-like delays between operations
+- **Session management**: Simulated user sessions with persistence
+
+### Quick Start
+
+1. **Install k6** (if not already installed):
+   ```bash
+   # macOS (using Homebrew)
+   brew install k6
+   
+   # Or download from https://k6.io/docs/get-started/installation/
+   ```
+
+2. **Start the application**:
+   ```bash
+   pnpm dev
+   ```
+
+3. **Run load tests**:
+   ```bash
+   # Navigate to load tests directory
+   cd load-tests
+   
+   # Quick 1-minute test (great for development)
+   ./run-tests.sh local baseline-performance quick
+   
+   # Short 5-minute test 
+   ./run-tests.sh local baseline-performance short
+   
+   # Full 17-minute test (realistic load simulation)
+   ./run-tests.sh local baseline-performance long
+   ```
+
+### Test Structure
+
+```
+load-tests/
+├── config/
+│   └── environments.js          # Environment configurations (local/staging/prod)
+├── scenarios/
+│   └── baseline-performance.js  # Main test scenarios
+├── utils/
+│   └── data-generators.js       # Realistic data generation
+├── run-tests.sh                 # Test runner script
+└── README.md                    # Detailed k6 documentation
+```
+
+### Test Scenarios
+
+The load tests simulate 4 main user behaviors:
+
+1. **Read Heavy (60%)**: Health checks + book fetching
+2. **Write Operations (25%)**: Creating book reviews
+3. **Performance Testing (10%)**: Testing slow endpoints with various latencies
+4. **Error Simulation (5%)**: Triggering controlled errors for monitoring
+
+### Custom Metrics
+
+The tests track custom observability metrics:
+- `custom_success_requests`: Success rate tracking
+- `endpoint_response_time`: Response time distribution
+- `slow_endpoint_accuracy`: Latency simulation accuracy
+
+### Environment Configuration
+
+Three pre-configured environments:
+- **Local**: `http://localhost:8081` - For development
+- **Staging**: `https://staging.example.com` - For pre-production testing  
+- **Production**: `https://api.example.com` - For production load testing
+
+### Performance Thresholds
+
+Built-in performance validation:
+- HTTP error rate < 10%
+- 95th percentile response time < 500ms
+- Success rate > 85%
+- Slow endpoint accuracy within 50ms
+
+For detailed k6 documentation, configuration options, and advanced usage, see [load-tests/README.md](./load-tests/README.md).
 
 ## Code Quality & Formatting
 
