@@ -1,12 +1,18 @@
 import {
 	type AwilixContainer,
 	InjectionMode,
+	asClass,
+	asFunction,
 	asValue,
 	createContainer,
 } from "awilix";
 import type { FastifyInstance } from "fastify";
 import fp from "fastify-plugin";
 import type { AppContainer } from "./container-types";
+import { PostgresBookRepo } from "../repository/BookRepo/PostgresBookRepo";
+import { GetBooksUseCase } from "../domain/use-case/GetBooksUseCase";
+import { PostgresReviewRepo } from "../repository/ReviewRepo/PostgresReviewRepo";
+import { CreateReviewUseCase } from "../domain/use-case/CreateReviewUseCase";
 
 export const container: AwilixContainer<AppContainer> = createContainer({
 	injectionMode: InjectionMode.PROXY,
@@ -22,5 +28,19 @@ export default fp(async (fastify: FastifyInstance) => {
 
 	container.register({
 		logger: asValue(fastify.log),
+		getBooksUseCase: asClass(GetBooksUseCase).inject(() => ({
+			bookRepo: container.resolve("bookRepo"),
+			logger: fastify.log,
+		})),
+		createReviewUseCase: asClass(CreateReviewUseCase).inject(() => ({
+			reviewRepo: container.resolve("reviewRepo"),
+			logger: fastify.log,
+		})),
+		bookRepo: asFunction(
+			() => new PostgresBookRepo(pgDecorator, fastify.log),
+		).scoped(),
+		reviewRepo: asFunction(
+			() => new PostgresReviewRepo(pgDecorator, fastify.log),
+		).scoped(),
 	});
 });

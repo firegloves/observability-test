@@ -1,3 +1,4 @@
+import opentelemetry from "@opentelemetry/api";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
@@ -7,7 +8,10 @@ import {
 	BatchLogRecordProcessor,
 	LoggerProvider,
 } from "@opentelemetry/sdk-logs";
-import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
+import {
+	MeterProvider,
+	PeriodicExportingMetricReader,
+} from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import {
 	ATTR_SERVICE_NAME,
@@ -35,12 +39,19 @@ const metricReader = new PeriodicExportingMetricReader({
 	exportIntervalMillis: 1000,
 });
 
+const meterProvider = new MeterProvider({
+	resource: resource,
+	readers: [metricReader],
+});
+
 const sdk = new NodeSDK({
 	resource,
 	traceExporter,
-	metricReader,
+	// metricReader,
 	instrumentations: [getNodeAutoInstrumentations()],
 });
+
+opentelemetry.metrics.setGlobalMeterProvider(meterProvider);
 
 console.log("####Starting OpenTelemetry SDK");
 

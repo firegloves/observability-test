@@ -1,0 +1,17 @@
+http://localhost:8081/health
+
+###
+
+http://localhost:8081/v1/books
+
+###
+
+POST http://localhost:8081/v1/reviews
+content-type: application/json
+
+{
+    "book_id": 1,
+    "user_id": 1,
+    "rating": 5,
+    "comment": "This is a test comment"
+}
