@@ -162,3 +162,89 @@ content-type: application/json
 ###
 
 http://localhost:8081/v1/simulateError
+
+###
+# ===============================================
+# ERROR SCENARIOS - Step 2.1: Database Connection Errors
+# ===============================================
+
+### List available database error scenarios
+GET http://localhost:8081/v1/errors/database/scenarios
+Content-Type: application/json
+
+### Test database connection timeout (90% failure rate)
+POST http://localhost:8081/v1/errors/database
+Content-Type: application/json
+
+{
+  "error_type": "connection_timeout",
+  "force_error": false,
+  "retry_attempts": 2,
+  "operation_context": "user_query"
+}
+
+### Test database connection refused (95% failure rate)
+POST http://localhost:8081/v1/errors/database
+Content-Type: application/json
+
+{
+  "error_type": "connection_refused",
+  "force_error": false,
+  "retry_attempts": 3,
+  "operation_context": "background_job"
+}
+
+### Test database deadlock (70% failure rate)
+POST http://localhost:8081/v1/errors/database
+Content-Type: application/json
+
+{
+  "error_type": "deadlock",
+  "force_error": false,
+  "retry_attempts": 2,
+  "operation_context": "user_query"
+}
+
+### Test connection pool exhaustion (80% failure rate)
+POST http://localhost:8081/v1/errors/database
+Content-Type: application/json
+
+{
+  "error_type": "pool_exhaustion",
+  "force_error": false,
+  "retry_attempts": 1,
+  "operation_context": "health_check"
+}
+
+### Test network partition (100% failure rate)
+POST http://localhost:8081/v1/errors/database
+Content-Type: application/json
+
+{
+  "error_type": "network_partition",
+  "force_error": true,
+  "retry_attempts": 3,
+  "operation_context": "migration"
+}
+
+### Test connection timeout with forced error
+POST http://localhost:8081/v1/errors/database
+Content-Type: application/json
+
+{
+  "error_type": "connection_timeout",
+  "force_error": true,
+  "retry_attempts": 2,
+  "operation_context": "user_query"
+}
+
+### Test deadlock without retries
+POST http://localhost:8081/v1/errors/database
+Content-Type: application/json
+
+{
+  "error_type": "deadlock",
+  "force_error": false,
+  "retry_attempts": 0,
+  "operation_context": "background_job"
+}

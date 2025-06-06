@@ -592,7 +592,7 @@ const route: FastifyPluginAsync = async (fastify) => {
 		async (request, reply): Promise<CpuIntensiveResponseType> => {
 			const startTime = process.hrtime();
 			const memoryBefore = process.memoryUsage();
-			console.log("##### CPUUUUUUUUU");
+
 			try {
 				const { computation_type, intensity, iterations }: CpuIntensiveRequest =
 					request.body;

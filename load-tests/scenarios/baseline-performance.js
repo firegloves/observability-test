@@ -24,6 +24,13 @@ import {
 	getDatabaseHeavyThresholds,
 } from "./modules/database-heavy-operations.js";
 
+// Import database error scenarios
+import {
+	executeDatabaseErrorScenario,
+	validateDatabaseErrorScenariosEndpoint,
+	databaseErrorMetrics,
+} from "./modules/database-error-scenarios.js";
+
 // Custom metrics for observability comparison
 const customSuccessRate = new Counter("custom_success_requests");
 const customErrorRate = new Counter("custom_error_requests");
@@ -44,16 +51,49 @@ export const options = {
 		...getDatabaseHeavyThresholds(),
 		custom_success_requests: ["rate>0.85"], // 85% success rate
 		slow_endpoint_accuracy: ["p(95)<50"], // Latency accuracy within 50ms
+		// Database error scenarios thresholds
+		database_error_success_rate: ["rate>0.15"], // At least 15% success rate (due to high failure rates)
+		database_error_recovery_rate: ["rate>0.20"], // At least 20% recovery rate
+		database_error_execution_time_ms: ["p(95)<15000"], // 95% under 15 seconds
+		database_error_retry_attempts: ["avg<3"], // Average retry attempts under 3
 	},
 };
 
+// Setup function - runs once per VU at the beginning
+export function setup() {
+	// Validate database error scenarios endpoint is available
+	const testSession = generateUserSession();
+	const isValid = validateDatabaseErrorScenariosEndpoint(testSession);
+
+	console.log(
+		`🔧 Setup: Database error scenarios endpoint validation: ${isValid ? "✅ PASSED" : "❌ FAILED"}`,
+	);
+
+	return {
+		databaseErrorScenariosAvailable: isValid,
+		setupTime: new Date().toISOString(),
+	};
+}
+
 // Main test function
-export default function () {
+export default function (data) {
 	const session = generateUserSession();
 	const weights = getScenarioWeights();
 	const scenario = selectScenario(weights);
 
 	console.log(`🧪 User ${session.userId} executing: ${scenario}`);
+
+	// Skip database errors if not available
+	if (
+		scenario === "database_errors" &&
+		!data?.databaseErrorScenariosAvailable
+	) {
+		console.log(
+			`⚠️  User ${session.userId}: Database errors scenario skipped - endpoint not available`,
+		);
+		sleep(randomThinkTime());
+		return;
+	}
 
 	switch (scenario) {
 		case "read_heavy":
@@ -77,6 +117,9 @@ export default function () {
 			break;
 		case "cpu_intensive":
 			executeCpuIntensiveScenario(session);
+			break;
+		case "database_errors":
+			executeDatabaseErrorScenario(session, customSuccessRate);
 			break;
 	}
 

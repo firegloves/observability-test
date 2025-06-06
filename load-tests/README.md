@@ -133,11 +133,21 @@ k6 run --stage 1m:5 --stage 3m:15 --stage 2m:25 --stage 2m:10 --stage 1m:0 load-
   - `database_heavy_success_total`: Successful database operations
   - `database_heavy_error_total`: Failed database operations
 
-- **CPU Intensive Metrics** (NEW!):
+- **CPU Intensive Metrics**:
   - `cpu_operations_total`: Total CPU operations by computation type
   - `cpu_execution_time_ms`: Execution time by computation type and intensity
   - `cpu_utilization_estimate`: CPU utilization estimate by operation
   - `cpu_custom_iterations_total`: Operations using custom iteration counts
+
+- **Database Error Scenario Metrics** (NEW!):
+  - `database_error_requests_total`: Total error scenario requests by type and context
+  - `database_error_errors_total`: Failed error scenario attempts with error codes
+  - `database_error_recoveries_total`: Successful error recoveries by type
+  - `database_error_success_rate`: Overall error scenario success rate by type
+  - `database_error_recovery_rate`: Recovery success rate by error type
+  - `database_error_execution_time_ms`: Total execution time including retries
+  - `database_error_recovery_time_ms`: Time to recover from errors
+  - `database_error_retry_attempts`: Number of retry attempts per scenario
 
 ## 🎯 Test Thresholds
 
@@ -146,11 +156,21 @@ k6 run --stage 1m:5 --stage 3m:15 --stage 2m:25 --stage 2m:10 --stage 1m:0 load-
 - Error rate: < 10%
 - Success rate: > 85%
 - Slow endpoint accuracy: < 50ms difference
+- **Database Error Scenarios**:
+  - Success rate: > 15% (due to high failure rates)
+  - Recovery rate: > 20%
+  - Execution time p95: < 15 seconds
+  - Average retry attempts: < 3
 
 ### **Production Environment**
 - P95 response time: < 200ms
 - Error rate: < 1%
 - Success rate: > 99%
+- **Database Error Scenarios**:
+  - Success rate: > 25% (better in production)
+  - Recovery rate: > 40%
+  - Execution time p95: < 10 seconds
+  - Average retry attempts: < 2
 
 ## 📈 Results Analysis
 
@@ -324,6 +344,71 @@ This test suite generates data specifically designed to compare observability pl
 
 ---
 
+### **🔥 Database Error Scenarios - Error Recovery & Resilience Testing**
+
+**What it simulates**: Database connection errors, network issues, and recovery mechanisms  
+**What you can observe**:
+
+- **Error Recovery Patterns**: How the system handles different database failure modes
+- **Retry Logic Effectiveness**: Exponential backoff and retry strategy validation
+- **Circuit Breaker Behavior**: System protection mechanisms under database stress
+- **Error Correlation**: Tracing error propagation through the system
+- **Recovery Time Measurement**: Time to recover from different error scenarios
+
+**Key Insights for Teams**:
+- **Database Teams**: Connection pool configuration and failure handling
+- **Backend Teams**: Retry logic tuning and error handling robustness
+- **SRE Teams**: Database failover and recovery time optimization
+- **Infrastructure Teams**: Network resilience and timeout configuration
+
+**Scenario Types & Expected Behavior**:
+
+1. **Connection Timeout (25% of error tests)**
+   - **Failure Rate**: ~90% (connection establishment issues)
+   - **Max Time**: <10 seconds (including retries)
+   - **Common Contexts**: User queries, background jobs
+   - **What to watch**: Proper timeout handling, no hanging connections
+
+2. **Connection Refused (20% of error tests)**
+   - **Failure Rate**: ~95% (port closed/service down)
+   - **Max Time**: <1 second (fast failure)
+   - **Common Contexts**: User queries, health checks
+   - **What to watch**: Fast failure detection, proper error messaging
+
+3. **Database Deadlock (30% of error tests)**
+   - **Failure Rate**: ~70% (transaction conflicts)
+   - **Max Time**: <8 seconds (deadlock resolution)
+   - **Common Contexts**: User queries, background jobs
+   - **What to watch**: Deadlock detection speed, transaction rollback
+
+4. **Connection Pool Exhaustion (15% of error tests)**
+   - **Failure Rate**: ~80% (no available connections)
+   - **Max Time**: <12 seconds (pool timeout)
+   - **Common Contexts**: Background jobs, health checks
+   - **What to watch**: Pool size configuration, connection leaks
+
+5. **Network Partition (10% of error tests)**
+   - **Failure Rate**: 100% (network completely unavailable)
+   - **Max Time**: <20 seconds (network timeout)
+   - **Common Contexts**: Migrations, background jobs
+   - **What to watch**: Network timeout configuration, service degradation
+
+**Error Recovery Features**:
+- **Retry Logic**: Exponential backoff with jitter (configurable 0-5 attempts)
+- **Operation Context**: Different retry strategies per operation type
+- **Force Error**: Deterministic testing option (20% of tests)
+- **Recovery Metrics**: Detailed timing and attempt tracking
+
+**What to watch for**:
+- **Success Rate**: Minimum 15% overall (some scenarios designed to fail)
+- **Recovery Rate**: Minimum 20% of failed attempts should eventually succeed
+- **Execution Time**: 95% of operations under 15 seconds total
+- **Retry Attempts**: Average under 3 attempts per operation
+- **Error Correlation**: Clear traces connecting errors to root causes
+- **Recovery Time**: Fast recovery when possible (under 10 seconds)
+
+---
+
 ### **🧠 CPU Intensive Operations - Computational Performance Analysis**
 
 **What it simulates**: CPU-intensive workloads and computational performance  
@@ -374,9 +459,11 @@ Compare metrics across different load stages:
 
 ### **Operation Type Correlation**
 Analyze how different operations interact:
-- **Resource competition**: Database heavy vs normal operations
-- **Error propagation**: How errors in one operation affect others
+- **Resource competition**: Database heavy vs normal operations vs CPU intensive
+- **Error propagation**: How database errors affect other operations
 - **Performance isolation**: Whether slow operations affect fast ones
+- **Error recovery impact**: How database error recovery affects system performance
+- **Retry logic efficiency**: Analysis of exponential backoff and recovery patterns
 - **Caching effectiveness**: Hit rates across different operation types
 
 ### **Time-Based Patterns**
