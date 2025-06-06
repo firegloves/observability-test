@@ -942,6 +942,287 @@
           }
         }
       }
+    },
+    "/v1/errors/database": {
+      "post": {
+        "summary": "Simulate database connection errors",
+        "tags": [
+          "Error Scenarios"
+        ],
+        "description": "Simulates various database connection error scenarios for testing error handling and observability",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "error_type": {
+                    "type": "string",
+                    "enum": [
+                      "connection_timeout",
+                      "connection_refused",
+                      "deadlock",
+                      "pool_exhaustion",
+                      "network_partition"
+                    ]
+                  },
+                  "force_error": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "retry_attempts": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 5,
+                    "default": 2
+                  },
+                  "operation_context": {
+                    "type": "string",
+                    "enum": [
+                      "user_query",
+                      "background_job",
+                      "migration",
+                      "health_check"
+                    ],
+                    "default": "user_query"
+                  }
+                },
+                "required": [
+                  "error_type"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "error_type": {
+                          "type": "string"
+                        },
+                        "scenario_name": {
+                          "type": "string"
+                        },
+                        "execution_time_ms": {
+                          "type": "number"
+                        },
+                        "operation_context": {
+                          "type": "string"
+                        },
+                        "recovery_strategy": {
+                          "type": "string"
+                        },
+                        "retry_attempts": {
+                          "type": "number"
+                        },
+                        "final_success": {
+                          "type": "boolean"
+                        },
+                        "timestamp": {
+                          "type": "string"
+                        },
+                        "metadata": {
+                          "type": "object",
+                          "properties": {
+                            "simulated_delay_ms": {
+                              "type": "number"
+                            },
+                            "success_probability": {
+                              "type": "number"
+                            },
+                            "error_code": {
+                              "type": "string"
+                            },
+                            "recovery_time_ms": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "simulated_delay_ms",
+                            "success_probability",
+                            "error_code",
+                            "recovery_time_ms"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "error_type",
+                        "scenario_name",
+                        "execution_time_ms",
+                        "operation_context",
+                        "recovery_strategy",
+                        "retry_attempts",
+                        "final_success",
+                        "timestamp",
+                        "metadata"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_details": {
+                      "type": "object",
+                      "properties": {
+                        "error_type": {
+                          "type": "string"
+                        },
+                        "error_code": {
+                          "type": "string"
+                        },
+                        "retry_attempts": {
+                          "type": "number"
+                        },
+                        "total_time_ms": {
+                          "type": "number"
+                        },
+                        "context": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "error_type",
+                        "error_code",
+                        "retry_attempts",
+                        "total_time_ms",
+                        "context"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/errors/database/scenarios": {
+      "get": {
+        "summary": "List available database error scenarios",
+        "tags": [
+          "Error Scenarios"
+        ],
+        "description": "Returns a list of all available database error scenarios for testing",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "scenarios": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "error_type": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "delay_ms": {
+                                "type": "number"
+                              },
+                              "success_rate": {
+                                "type": "number"
+                              },
+                              "error_code": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "error_type",
+                              "name",
+                              "description",
+                              "delay_ms",
+                              "success_rate",
+                              "error_code"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "total_scenarios": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "scenarios",
+                        "total_scenarios"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "servers": []

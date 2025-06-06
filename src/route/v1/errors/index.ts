@@ -4,16 +4,20 @@ import { trace, metrics } from "@opentelemetry/api";
 import {
 	GENERIC_SUCCESS_RESPONSE_SCHEMA,
 	GENERIC_ERROR_RESPONSE_SCHEMA,
-} from "../types.js";
+} from "../../types";
+import type { FastifyBaseLogger } from "fastify";
 
 // Create tracer and metrics for error scenarios
 const tracer = trace.getTracer("error-scenarios", "1.0.0");
 const meter = metrics.getMeter("error-scenarios", "1.0.0");
 
 // Metrics
-const errorScenarioRequests = meter.createCounter("error_scenario_requests_total", {
-	description: "Total number of error scenario requests",
-});
+const errorScenarioRequests = meter.createCounter(
+	"error_scenario_requests_total",
+	{
+		description: "Total number of error scenario requests",
+	},
+);
 
 const errorScenarioErrors = meter.createCounter("error_scenario_errors_total", {
 	description: "Total number of error scenario errors by type",
@@ -76,12 +80,10 @@ const DATABASE_ERROR_REQUEST_SCHEMA = z.object({
 	]),
 	force_error: z.boolean().optional().default(false),
 	retry_attempts: z.number().min(0).max(5).optional().default(2),
-	operation_context: z.enum([
-		"user_query",
-		"background_job",
-		"migration",
-		"health_check",
-	]).optional().default("user_query"),
+	operation_context: z
+		.enum(["user_query", "background_job", "migration", "health_check"])
+		.optional()
+		.default("user_query"),
 });
 
 // Response schemas
@@ -103,13 +105,15 @@ const DATABASE_ERROR_SUCCESS_DATA_SCHEMA = z.object({
 });
 
 const DATABASE_ERROR_FAILURE_SCHEMA = GENERIC_ERROR_RESPONSE_SCHEMA.extend({
-	error_details: z.object({
-		error_type: z.string(),
-		error_code: z.string(),
-		retry_attempts: z.number(),
-		total_time_ms: z.number(),
-		context: z.string(),
-	}).optional(),
+	error_details: z
+		.object({
+			error_type: z.string(),
+			error_code: z.string(),
+			retry_attempts: z.number(),
+			total_time_ms: z.number(),
+			context: z.string(),
+		})
+		.optional(),
 });
 
 const DATABASE_ERROR_SUCCESS_SCHEMA = GENERIC_SUCCESS_RESPONSE_SCHEMA.extend({
@@ -122,14 +126,16 @@ const DATABASE_ERROR_RESPONSE_SCHEMA = z.discriminatedUnion("success", [
 ]);
 
 const SCENARIOS_LIST_DATA_SCHEMA = z.object({
-	scenarios: z.array(z.object({
-		error_type: z.string(),
-		name: z.string(),
-		description: z.string(),
-		delay_ms: z.number(),
-		success_rate: z.number(),
-		error_code: z.string(),
-	})),
+	scenarios: z.array(
+		z.object({
+			error_type: z.string(),
+			name: z.string(),
+			description: z.string(),
+			delay_ms: z.number(),
+			success_rate: z.number(),
+			error_code: z.string(),
+		}),
+	),
 	total_scenarios: z.number(),
 });
 
@@ -153,7 +159,7 @@ async function simulateDatabaseOperation(
 	forceError: boolean,
 	retryAttempts: number,
 	context: string,
-	logger: any,
+	logger: FastifyBaseLogger,
 ): Promise<{
 	success: boolean;
 	executionTime: number;
@@ -183,19 +189,23 @@ async function simulateDatabaseOperation(
 		// Retry loop
 		for (let attempt = 0; attempt <= retryAttempts; attempt++) {
 			currentAttempts = attempt + 1;
-			const attemptSpan = tracer.startSpan(`DatabaseError.attempt_${attempt + 1}`, {
-				attributes: {
-					"retry.attempt": attempt + 1,
-					"retry.max_attempts": retryAttempts + 1,
+			const attemptSpan = tracer.startSpan(
+				`DatabaseError.attempt_${attempt + 1}`,
+				{
+					attributes: {
+						"retry.attempt": attempt + 1,
+						"retry.max_attempts": retryAttempts + 1,
+					},
 				},
-			});
+			);
 
 			try {
 				// Simulate operation delay
 				await new Promise((resolve) => setTimeout(resolve, scenario.delay_ms));
 
 				// Determine if this attempt should succeed or fail
-				const shouldSucceed = !forceError && Math.random() < scenario.success_rate;
+				const shouldSucceed =
+					!forceError && Math.random() < scenario.success_rate;
 
 				if (shouldSucceed) {
 					// Success case
@@ -404,7 +414,7 @@ const errorsRoute: FastifyPluginAsync = async (fastify) => {
 						execution_time_ms: result.executionTime,
 						recovery_time_ms: result.recoveryTime,
 						total_attempts: result.finalAttempts,
-						msg: `#### Database error simulation resolved successfully`,
+						msg: "#### Database error simulation resolved successfully",
 					});
 
 					return reply.code(200).send({
@@ -443,7 +453,9 @@ const errorsRoute: FastifyPluginAsync = async (fastify) => {
 					"error.message": result.error?.message || "Unknown error",
 				});
 
-				span.recordException(new Error(result.error?.message || "Database operation failed"));
+				span.recordException(
+					new Error(result.error?.message || "Database operation failed"),
+				);
 				span.addEvent("error_scenario_failed", {
 					final_result: "error",
 					total_attempts: result.finalAttempts,
@@ -486,7 +498,7 @@ const errorsRoute: FastifyPluginAsync = async (fastify) => {
 					request_id: requestId,
 					error_type,
 					error: error,
-					msg: `#### Unexpected error in database error simulation`,
+					msg: "#### Unexpected error in database error simulation",
 				});
 
 				return reply.code(500).send({
@@ -507,10 +519,35 @@ const errorsRoute: FastifyPluginAsync = async (fastify) => {
 		{
 			schema: {
 				summary: "List available database error scenarios",
-				description: "Returns a list of all available database error scenarios for testing",
+				description:
+					"Returns a list of all available database error scenarios for testing",
 				tags: ["Error Scenarios"],
 				response: {
 					200: SCENARIOS_LIST_SUCCESS_SCHEMA,
 				},
 			},
 		},
+		async (request, reply) => {
+			const scenarios = Object.entries(ERROR_SCENARIOS).map(
+				([key, config]) => ({
+					error_type: key,
+					name: config.name,
+					description: config.description,
+					delay_ms: config.delay_ms,
+					success_rate: config.success_rate,
+					error_code: config.error_code,
+				}),
+			);
+
+			return reply.code(200).send({
+				success: true,
+				data: {
+					scenarios,
+					total_scenarios: scenarios.length,
+				},
+			});
+		},
+	);
+};
+
+export default errorsRoute;
