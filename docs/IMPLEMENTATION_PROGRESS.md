@@ -16,7 +16,7 @@ This document tracks the implementation progress of the observability testing ap
 - [X] 2.4 Different HTTP error codes (4xx, 5xx) ✅
 
 ### **Step 3: Enhanced Tracing**
-- [ ] 3.1 Custom span attributes (user_id, operation_type)
+- [X] 3.1 Custom span attributes (user_id, operation_type) ✅
 - [ ] 3.2 Multi-step operations (review creation → book update)
 - [ ] 3.3 Error correlation in traces
 
@@ -318,6 +318,91 @@ Each implemented endpoint generates specific data for SignOz vs GCP comparison:
 2. **Step 2 - Error Scenarios** implementation
 3. **Test observability data** in both SignOz and GCP
 4. **Document platform differences** for comparison
+
+---
+
+### ✅ Step 3.1 - Custom Span Attributes (fc/observability-031)
+
+**Branch**: `fc/observability-031-custom-span-attributes`  
+**Commit**: `4d4577d`  
+**Completed**: 2025-06-06
+
+#### Implementation Details:
+- **Endpoints**: 
+  - `POST /v1/tracing/test-attributes` - Tests custom span attributes with 5 operation types
+  - `POST /v1/tracing/nested-operations` - Demonstrates parent-child span hierarchy
+- **Custom Attributes**: `user.id`, `user.session`, `operation.type`, `http.method`, `http.url`, `http.client_ip`
+- **Operation Types**: `database_query`, `cache_operation`, `external_api`, `file_processing`, `generic`
+
+#### OpenTelemetry Features:
+- **Enhanced Span Helper**: `extractCustomSpanAttributes()` function extracts context from HTTP headers/request body
+- **Tracing Plugin**: Fastify plugin automatically enhances all spans with custom attributes via hooks
+- **Context Propagation**: `withActiveSpanWithContext()` for automatic attribute application to child spans
+- **Span Hierarchy**: Parent-child relationships with attribute inheritance
+
+#### Request Schema Examples:
+```json
+{
+  "operation_type": "database_query",
+  "test_payload": {
+    "query_complexity": "high",
+    "table_count": 3
+  }
+}
+```
+```json
+{
+  "parent_operation": "user_review_process",
+  "child_operations": ["validate_user", "create_review", "update_book_stats"],
+  "depth": 2
+}
+```
+
+#### Response Schema:
+```json
+{
+  "success": true,
+  "data": {
+    "operation_type": "database_query",
+    "execution_time_ms": 102,
+    "extracted_attributes": {
+      "user.id": "test-user-123",
+      "operation.type": "database_query",
+      "http.method": "POST"
+    },
+    "span_context": {
+      "trace_id": "72ece2c828d9440eea248d6083f09682",
+      "span_id": "483bdc335b90dcdb"
+    },
+    "trace_hierarchy": {
+      "parent_span_id": "e172f168ab115c5d",
+      "child_span_ids": ["b38e6df3d0780d91"]
+    }
+  }
+}
+```
+
+#### k6 Load Testing Integration:
+- **Tracing Scenarios**: 5% of total load testing traffic
+- **Custom Metrics**: `tracing_attributes_success_rate`, `tracing_response_time_ms`
+- **Weighted Selection**: 5 operation types with realistic distribution
+- **Header Simulation**: User ID, session, and performance test headers
+
+#### Testing Results:
+- ✅ Custom attributes extraction: 7 attributes per span
+- ✅ Parent-child span hierarchy: Working correctly
+- ✅ k6 integration: 44/44 checks passed
+- ✅ TypeScript compilation: 0 errors
+- ✅ Endpoint performance: P95 < 100ms
+
+#### Files Added/Modified:
+- ✅ `src/observability/spanHelper.ts` (enhanced)
+- ✅ `src/observability/tracingPlugin.ts` (new)
+- ✅ `src/route/v1/tracing/index.ts` (new)
+- ✅ `src/app/server.ts` (tracing plugin registration)
+- ✅ `load-tests/scenarios/modules/tracing-scenarios.js` (new)
+- ✅ `load-tests/scenarios/baseline-performance.js` (enhanced)
+- ✅ `load-tests/README.md` (documentation updated)
 
 ---
 
