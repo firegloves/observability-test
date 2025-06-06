@@ -6,7 +6,7 @@ import {
 	GENERIC_ERROR_RESPONSE_SCHEMA,
 } from "../../types";
 import type { FastifyBaseLogger } from "fastify";
-import { randomBytes } from "crypto";
+import { randomBytes } from "node:crypto";
 
 // Create tracer and metrics for error scenarios
 const tracer = trace.getTracer("error-scenarios", "1.0.0");
