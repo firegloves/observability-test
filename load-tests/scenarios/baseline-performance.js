@@ -35,6 +35,13 @@ import {
 // Import cascading failure scenarios
 import { executeMixedCascadingFailureScenarios } from "./modules/cascading-failure-scenarios.js";
 
+// Import HTTP error scenarios
+import {
+	executeHttpErrorScenario,
+	executeMixedHttpErrorScenario,
+	getHttpErrorScenarios,
+} from "./modules/http-error-scenarios.js";
+
 // Custom metrics for observability comparison
 const customSuccessRate = new Counter("custom_success_requests");
 const customErrorRate = new Counter("custom_error_requests");
@@ -57,6 +64,37 @@ export const options = {
 		slow_endpoint_accuracy: ["p(95)<50"], // Latency accuracy within 50ms
 	},
 };
+
+// Setup function - runs once before all tests
+export function setup() {
+	console.log(`🌍 Test Environment: ${currentEnv.name}`);
+	console.log(`🎯 Target URL: ${currentEnv.baseUrl}`);
+
+	// Validate HTTP error scenarios are available
+	console.log("🔍 Validating HTTP error scenarios setup...");
+	try {
+		const httpErrorScenariosResponse = getHttpErrorScenarios(
+			currentEnv.baseUrl,
+		);
+		if (
+			!httpErrorScenariosResponse ||
+			httpErrorScenariosResponse.status !== 200
+		) {
+			throw new Error("HTTP error scenarios endpoint not responding");
+		}
+		console.log("✅ HTTP error scenarios validation passed");
+	} catch (error) {
+		console.error(
+			`❌ HTTP error scenarios validation failed: ${error.message}`,
+		);
+		// Non-blocking - we can continue without HTTP error scenarios
+	}
+
+	console.log("🚀 Starting baseline performance tests...");
+	return {
+		env: currentEnv,
+	};
+}
 
 // Main test function
 export default function () {
@@ -91,6 +129,9 @@ export default function () {
 			break;
 		case "cascading_failure":
 			executeCascadingFailureScenario(session);
+			break;
+		case "http_error_codes":
+			executeHttpErrorCodeScenario(session);
 			break;
 	}
 
@@ -188,6 +229,43 @@ function executeCascadingFailureScenario(session) {
 	});
 
 	if (cascadingCheck) {
+		customSuccessRate.add(1);
+	} else {
+		customErrorRate.add(1);
+	}
+
+	const totalTime = Date.now() - startTime;
+	endpointResponseTime.add(totalTime);
+}
+
+/**
+ * Execute HTTP error code scenarios
+ */
+function executeHttpErrorCodeScenario(session) {
+	console.log("🚨 Testing HTTP error code scenarios");
+
+	const startTime = Date.now();
+
+	// 70% specific error codes, 30% mixed/random
+	const useSpecificScenario = Math.random() < 0.7;
+
+	let result;
+	if (useSpecificScenario) {
+		result = executeHttpErrorScenario(currentEnv.baseUrl);
+	} else {
+		result = executeMixedHttpErrorScenario(currentEnv.baseUrl);
+	}
+
+	const httpErrorCheck = check(result, {
+		"HTTP error scenario responded": () => result.success !== undefined,
+		"HTTP error response time < 30000ms": () => result.response_time < 30000,
+		"Valid HTTP error code returned": () => {
+			const status = result.actual_status || result.error_code;
+			return status >= 400 && status < 600;
+		},
+	});
+
+	if (httpErrorCheck) {
 		customSuccessRate.add(1);
 	} else {
 		customErrorRate.add(1);

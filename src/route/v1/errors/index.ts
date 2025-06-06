@@ -90,6 +90,29 @@ const serviceFailureCounter = meter.createCounter(
 	},
 );
 
+// HTTP Error Code Metrics
+const httpErrorCodeRequestsCounter = meter.createCounter(
+	"http_error_code_requests_total",
+	{
+		description: "Total HTTP error code simulation requests",
+	},
+);
+
+const httpErrorCodeResponseTimeHistogram = meter.createHistogram(
+	"http_error_code_response_time_ms",
+	{
+		description: "Response time for HTTP error code scenarios",
+		unit: "ms",
+	},
+);
+
+const httpErrorCodeSuccessRate = meter.createCounter(
+	"http_error_code_success_rate",
+	{
+		description: "Success rate for HTTP error code scenarios",
+	},
+);
+
 // =============================================================================
 // DATABASE ERROR SCENARIOS
 // =============================================================================
@@ -194,6 +217,242 @@ const TIMEOUT_SCENARIOS = {
 		recovery_strategy: "exponential_backoff_with_limit",
 	},
 } as const;
+
+// =============================================================================
+// HTTP ERROR CODE SCENARIOS
+// =============================================================================
+
+const HTTP_ERROR_SCENARIOS: Record<number, HttpErrorScenario> = {
+	// 4xx Client Errors
+	400: {
+		code: 400,
+		category: "4xx",
+		name: "Bad Request",
+		description: "Invalid request format or missing required parameters",
+		typical_causes: [
+			"Invalid JSON format",
+			"Missing required fields",
+			"Invalid data types",
+			"Malformed request body",
+		],
+		should_retry: false,
+		delay_range: { min: 50, max: 200 },
+		additional_headers: {
+			"X-Error-Type": "validation_error",
+		},
+	},
+	401: {
+		code: 401,
+		category: "4xx",
+		name: "Unauthorized",
+		description: "Authentication credentials missing or invalid",
+		typical_causes: [
+			"Missing authentication token",
+			"Expired JWT token",
+			"Invalid API key",
+			"Revoked credentials",
+		],
+		should_retry: false,
+		delay_range: { min: 100, max: 300 },
+		additional_headers: {
+			"WWW-Authenticate": "Bearer",
+			"X-Error-Type": "authentication_error",
+		},
+	},
+	403: {
+		code: 403,
+		category: "4xx",
+		name: "Forbidden",
+		description: "Access denied due to insufficient permissions",
+		typical_causes: [
+			"Insufficient user permissions",
+			"Resource access denied",
+			"IP address blocked",
+			"Rate limit exceeded",
+		],
+		should_retry: false,
+		delay_range: { min: 80, max: 250 },
+		additional_headers: {
+			"X-Error-Type": "authorization_error",
+		},
+	},
+	404: {
+		code: 404,
+		category: "4xx",
+		name: "Not Found",
+		description: "Requested resource does not exist",
+		typical_causes: [
+			"Invalid endpoint URL",
+			"Deleted resource",
+			"Mistyped resource ID",
+			"Resource never existed",
+		],
+		should_retry: false,
+		delay_range: { min: 30, max: 150 },
+		additional_headers: {
+			"X-Error-Type": "resource_not_found",
+		},
+	},
+	409: {
+		code: 409,
+		category: "4xx",
+		name: "Conflict",
+		description: "Request conflicts with current resource state",
+		typical_causes: [
+			"Duplicate resource creation",
+			"Concurrent modification",
+			"Business rule violation",
+			"Version conflict",
+		],
+		should_retry: true,
+		delay_range: { min: 200, max: 500 },
+		additional_headers: {
+			"X-Error-Type": "conflict_error",
+		},
+	},
+	422: {
+		code: 422,
+		category: "4xx",
+		name: "Unprocessable Entity",
+		description: "Request syntax valid but semantically incorrect",
+		typical_causes: [
+			"Business logic validation failed",
+			"Invalid data relationships",
+			"Constraint violations",
+			"Data integrity issues",
+		],
+		should_retry: false,
+		delay_range: { min: 150, max: 400 },
+		additional_headers: {
+			"X-Error-Type": "validation_error",
+		},
+	},
+	429: {
+		code: 429,
+		category: "4xx",
+		name: "Too Many Requests",
+		description: "Rate limit exceeded",
+		typical_causes: [
+			"API rate limit exceeded",
+			"Too many requests per minute",
+			"Burst limit reached",
+			"Quota exceeded",
+		],
+		should_retry: true,
+		delay_range: { min: 1000, max: 3000 },
+		additional_headers: {
+			"Retry-After": "60",
+			"X-RateLimit-Remaining": "0",
+			"X-Error-Type": "rate_limit_error",
+		},
+	},
+
+	// 5xx Server Errors
+	500: {
+		code: 500,
+		category: "5xx",
+		name: "Internal Server Error",
+		description:
+			"Generic server error - something went wrong on the server side",
+		typical_causes: [
+			"Unhandled exceptions",
+			"Application bugs",
+			"Configuration errors",
+			"Resource exhaustion",
+		],
+		should_retry: true,
+		delay_range: { min: 500, max: 2000 },
+		additional_headers: {
+			"X-Error-Type": "internal_server_error",
+		},
+	},
+	502: {
+		code: 502,
+		category: "5xx",
+		name: "Bad Gateway",
+		description: "Invalid response from upstream server",
+		typical_causes: [
+			"Upstream server down",
+			"Invalid response format",
+			"Gateway misconfiguration",
+			"Network connectivity issues",
+		],
+		should_retry: true,
+		delay_range: { min: 1000, max: 5000 },
+		additional_headers: {
+			"X-Error-Type": "gateway_error",
+		},
+	},
+	503: {
+		code: 503,
+		category: "5xx",
+		name: "Service Unavailable",
+		description: "Service temporarily unavailable",
+		typical_causes: [
+			"Server overloaded",
+			"Maintenance mode",
+			"Database unavailable",
+			"Dependency service down",
+		],
+		should_retry: true,
+		delay_range: { min: 2000, max: 8000 },
+		additional_headers: {
+			"Retry-After": "120",
+			"X-Error-Type": "service_unavailable",
+		},
+	},
+	504: {
+		code: 504,
+		category: "5xx",
+		name: "Gateway Timeout",
+		description: "Upstream server failed to respond in time",
+		typical_causes: [
+			"Upstream server timeout",
+			"Slow database queries",
+			"Network latency",
+			"Processing bottlenecks",
+		],
+		should_retry: true,
+		delay_range: { min: 5000, max: 15000 },
+		additional_headers: {
+			"X-Error-Type": "gateway_timeout",
+		},
+	},
+	507: {
+		code: 507,
+		category: "5xx",
+		name: "Insufficient Storage",
+		description: "Server unable to store data needed to complete request",
+		typical_causes: [
+			"Disk space full",
+			"Storage quota exceeded",
+			"Temporary file creation failed",
+			"Database storage limit",
+		],
+		should_retry: false,
+		delay_range: { min: 100, max: 500 },
+		additional_headers: {
+			"X-Error-Type": "storage_error",
+		},
+	},
+	508: {
+		code: 508,
+		category: "5xx",
+		name: "Loop Detected",
+		description: "Infinite loop detected while processing request",
+		typical_causes: [
+			"Circular dependencies",
+			"Recursive calls",
+			"Configuration loops",
+			"Proxy loop detection",
+		],
+		should_retry: false,
+		delay_range: { min: 200, max: 1000 },
+		additional_headers: {
+			"X-Error-Type": "loop_detected",
+		},
+	},
+};
 
 // =============================================================================
 // CASCADING FAILURE SCENARIOS
@@ -363,12 +622,36 @@ const CASCADING_FAILURE_SCENARIOS = {
 type ErrorScenarioType = keyof typeof ERROR_SCENARIOS;
 type TimeoutType = keyof typeof TIMEOUT_SCENARIOS;
 type CascadingFailureType = keyof typeof CASCADING_FAILURE_SCENARIOS;
+type HttpErrorCode = keyof typeof HTTP_ERROR_SCENARIOS;
 type ServiceContext =
 	| "external_api"
 	| "database"
 	| "cache"
 	| "messaging"
 	| "file_system";
+
+interface HttpErrorScenario {
+	code: number;
+	category: "4xx" | "5xx";
+	name: string;
+	description: string;
+	typical_causes: string[];
+	should_retry: boolean;
+	delay_range: {
+		min: number;
+		max: number;
+	};
+	additional_headers?: Record<string, string>;
+}
+
+interface HttpErrorRequestInterface {
+	error_code?: number;
+	category?: "4xx" | "5xx" | "all";
+	include_delay?: boolean;
+	custom_message?: string;
+	simulate_intermittent?: boolean;
+	intermittent_success_rate?: number; // 0-1, default 0.1 (10% success)
+}
 
 // =============================================================================
 // CIRCUIT BREAKER STATE MANAGEMENT
@@ -737,6 +1020,89 @@ const CascadingFailureScenariosListResponseSchema =
 		}),
 	});
 
+// =============================================================================
+// REQUEST/RESPONSE SCHEMAS - HTTP ERROR CODES
+// =============================================================================
+
+const HttpErrorRequestSchema = z.object({
+	error_code: z
+		.number()
+		.int()
+		.min(400)
+		.max(599)
+		.optional()
+		.refine(
+			(code) => !code || HTTP_ERROR_SCENARIOS[code as HttpErrorCode],
+			"Unsupported error code",
+		),
+	category: z.enum(["4xx", "5xx", "all"]).optional().default("all"),
+	include_delay: z.boolean().optional().default(true),
+	custom_message: z.string().optional(),
+	simulate_intermittent: z.boolean().optional().default(false),
+	intermittent_success_rate: z.number().min(0).max(1).optional().default(0.1),
+});
+
+const HttpErrorSuccessResponseSchema = GENERIC_SUCCESS_RESPONSE_SCHEMA.extend({
+	data: z.object({
+		request_id: z.string(),
+		error_code: z.number(),
+		category: z.string(),
+		scenario_name: z.string(),
+		description: z.string(),
+		execution_time_ms: z.number(),
+		should_retry: z.boolean(),
+		typical_causes: z.array(z.string()),
+		metadata: z.object({
+			delay_range_ms: z.object({
+				min: z.number(),
+				max: z.number(),
+			}),
+			actual_delay_ms: z.number(),
+			intermittent_simulation: z.boolean(),
+			success_rate: z.number(),
+			additional_headers: z.record(z.string()).optional(),
+		}),
+	}),
+});
+
+const HttpErrorErrorResponseSchema = GENERIC_ERROR_RESPONSE_SCHEMA.extend({
+	error_details: z.object({
+		request_id: z.string(),
+		attempted_error_code: z.number(),
+		scenario_name: z.string(),
+		execution_time_ms: z.number(),
+		retry_recommendation: z.string(),
+		typical_causes: z.array(z.string()),
+		recovery_suggestion: z.string(),
+	}),
+});
+
+const HttpErrorScenariosListResponseSchema =
+	GENERIC_SUCCESS_RESPONSE_SCHEMA.extend({
+		data: z.object({
+			scenarios: z.array(
+				z.object({
+					error_code: z.number(),
+					category: z.string(),
+					name: z.string(),
+					description: z.string(),
+					should_retry: z.boolean(),
+					delay_range: z.object({
+						min: z.number(),
+						max: z.number(),
+					}),
+					typical_causes: z.array(z.string()),
+					additional_headers: z.record(z.string()).optional(),
+				}),
+			),
+			total_scenarios: z.number(),
+			categories: z.object({
+				"4xx": z.number(),
+				"5xx": z.number(),
+			}),
+		}),
+	});
+
 // Type definitions
 type DatabaseErrorRequest = z.infer<typeof DATABASE_ERROR_REQUEST_SCHEMA>;
 type DatabaseErrorResponse = z.infer<typeof DATABASE_ERROR_RESPONSE_SCHEMA>;
@@ -745,10 +1111,140 @@ type CascadingFailureRequest = z.infer<typeof CascadingFailureRequestSchema>;
 type CascadingFailureResponse =
 	| z.infer<typeof CascadingFailureSuccessResponseSchema>
 	| z.infer<typeof CascadingFailureErrorResponseSchema>;
+type HttpErrorRequest = z.infer<typeof HttpErrorRequestSchema>;
+type HttpErrorResponse =
+	| z.infer<typeof HttpErrorSuccessResponseSchema>
+	| z.infer<typeof HttpErrorErrorResponseSchema>;
 
 // =============================================================================
 // UTILITY FUNCTIONS
 // =============================================================================
+
+async function simulateHttpError(
+	errorCode: HttpErrorCode | undefined,
+	category: "4xx" | "5xx" | "all",
+	includeDelay: boolean,
+	simulateIntermittent: boolean,
+	intermittentSuccessRate: number,
+	customMessage: string | undefined,
+	logger: FastifyBaseLogger,
+): Promise<{
+	success: boolean;
+	errorCode: number;
+	scenario: HttpErrorScenario;
+	executionTime: number;
+	actualDelay: number;
+	intermittentSimulation: boolean;
+}> {
+	const startTime = Date.now();
+
+	// Select error code based on request
+	let selectedCode: HttpErrorCode;
+	if (errorCode && HTTP_ERROR_SCENARIOS[errorCode]) {
+		selectedCode = errorCode;
+	} else {
+		// Get random error code based on category
+		const availableCodes = Object.keys(HTTP_ERROR_SCENARIOS)
+			.map(Number)
+			.filter((code) => {
+				const scenario = HTTP_ERROR_SCENARIOS[code as HttpErrorCode];
+				if (!scenario) return false;
+				if (category === "all") return true;
+				return scenario.category === category;
+			}) as HttpErrorCode[];
+
+		if (availableCodes.length === 0) {
+			throw new Error(
+				`No HTTP error codes available for category: ${category}`,
+			);
+		}
+
+		const randomIndex = Math.floor(Math.random() * availableCodes.length);
+		const tempCode = availableCodes[randomIndex];
+		if (tempCode === undefined) {
+			throw new Error("Failed to select HTTP error code");
+		}
+		selectedCode = tempCode;
+	}
+
+	const scenario = HTTP_ERROR_SCENARIOS[selectedCode];
+	if (!scenario) {
+		throw new Error(`Unsupported HTTP error code: ${selectedCode}`);
+	}
+
+	const span = tracer.startSpan(`HttpError.${selectedCode}`, {
+		attributes: {
+			"http.error_code": selectedCode,
+			"http.category": scenario.category,
+			"http.scenario_name": scenario.name,
+			"http.should_retry": scenario.should_retry,
+			"operation.include_delay": includeDelay,
+			"operation.simulate_intermittent": simulateIntermittent,
+			"operation.intermittent_success_rate": intermittentSuccessRate,
+		},
+	});
+
+	try {
+		logger.info({
+			error_code: selectedCode,
+			scenario_name: scenario.name,
+			category: scenario.category,
+			should_retry: scenario.should_retry,
+			include_delay: includeDelay,
+			simulate_intermittent: simulateIntermittent,
+			msg: `#### Simulating HTTP ${selectedCode} error: ${scenario.name}`,
+		});
+
+		// Handle intermittent simulation
+		let success = false;
+		if (simulateIntermittent) {
+			success = Math.random() < intermittentSuccessRate;
+			span.setAttributes({
+				"intermittent.enabled": true,
+				"intermittent.success": success,
+				"intermittent.success_rate": intermittentSuccessRate,
+			});
+		}
+
+		// Calculate and apply delay
+		let actualDelay = 0;
+		if (includeDelay && !success) {
+			actualDelay =
+				scenario.delay_range.min +
+				Math.random() * (scenario.delay_range.max - scenario.delay_range.min);
+
+			await new Promise((resolve) => setTimeout(resolve, actualDelay));
+		}
+
+		const executionTime = Date.now() - startTime;
+
+		logger.info({
+			error_code: selectedCode,
+			success: success,
+			execution_time_ms: executionTime,
+			actual_delay_ms: actualDelay,
+			typical_causes: scenario.typical_causes,
+			msg: "#### HTTP error simulation completed",
+		});
+
+		span.setAttributes({
+			"operation.success": success,
+			"timing.execution_time_ms": executionTime,
+			"timing.actual_delay_ms": actualDelay,
+		});
+
+		return {
+			success,
+			errorCode: selectedCode,
+			scenario,
+			executionTime,
+			actualDelay,
+			intermittentSimulation: simulateIntermittent,
+		};
+	} finally {
+		span.end();
+	}
+}
 
 function generateRequestId(): string {
 	return randomBytes(16).toString("hex");
@@ -1955,6 +2451,329 @@ const errorsRoute: FastifyPluginAsync = async (fastify) => {
 			}
 		},
 	);
+
+	// =============================================================================
+	// HTTP ERROR CODE SCENARIOS ENDPOINTS
+	// =============================================================================
+
+	// GET /http-errors/scenarios - List available HTTP error scenarios
+	fastify.get<{
+		Reply: z.infer<typeof HttpErrorScenariosListResponseSchema>;
+	}>(
+		"/http-errors/scenarios",
+		{
+			schema: {
+				response: {
+					200: HttpErrorScenariosListResponseSchema,
+				},
+			},
+		},
+		async (request, reply) => {
+			const scenarios = Object.entries(HTTP_ERROR_SCENARIOS).map(
+				([key, scenario]) => ({
+					error_code: Number(key),
+					category: scenario.category,
+					name: scenario.name,
+					description: scenario.description,
+					should_retry: scenario.should_retry,
+					delay_range: scenario.delay_range,
+					typical_causes: scenario.typical_causes,
+					additional_headers: scenario.additional_headers,
+				}),
+			);
+
+			const fourXXCount = scenarios.filter((s) => s.category === "4xx").length;
+			const fiveXXCount = scenarios.filter((s) => s.category === "5xx").length;
+
+			return reply.status(200).send({
+				success: true,
+				data: {
+					scenarios,
+					total_scenarios: scenarios.length,
+					categories: {
+						"4xx": fourXXCount,
+						"5xx": fiveXXCount,
+					},
+				},
+			});
+		},
+	);
+
+	// POST /http-errors - Execute HTTP error scenario simulation
+	fastify.post<{
+		Body: HttpErrorRequest;
+		Reply: HttpErrorResponse;
+	}>(
+		"/http-errors",
+		{
+			schema: {
+				body: HttpErrorRequestSchema,
+				response: {
+					200: HttpErrorSuccessResponseSchema,
+					400: HttpErrorErrorResponseSchema,
+					401: HttpErrorErrorResponseSchema,
+					403: HttpErrorErrorResponseSchema,
+					404: HttpErrorErrorResponseSchema,
+					409: HttpErrorErrorResponseSchema,
+					422: HttpErrorErrorResponseSchema,
+					429: HttpErrorErrorResponseSchema,
+					500: HttpErrorErrorResponseSchema,
+					502: HttpErrorErrorResponseSchema,
+					503: HttpErrorErrorResponseSchema,
+					504: HttpErrorErrorResponseSchema,
+					507: HttpErrorErrorResponseSchema,
+					508: HttpErrorErrorResponseSchema,
+				},
+			},
+		},
+		async (request, reply) => {
+			const {
+				error_code,
+				category = "all",
+				include_delay = true,
+				custom_message,
+				simulate_intermittent = false,
+				intermittent_success_rate = 0.1,
+			} = request.body;
+
+			const requestId = generateRequestId();
+
+			// Record metrics
+			httpErrorCodeRequestsCounter.add(1, {
+				error_code: error_code?.toString() || "random",
+				category,
+				simulate_intermittent: simulate_intermittent.toString(),
+			});
+
+			const span = tracer.startSpan("ErrorScenario.http_error", {
+				attributes: {
+					"http.method": "POST",
+					"http.route": "/v1/errors/http-errors",
+					"endpoint.name": "http_error_codes",
+					"test.scenario": "http_error_simulation",
+					"request.id": requestId,
+					"operation.error_code": error_code || "random",
+					"operation.category": category,
+					"operation.include_delay": include_delay,
+					"operation.simulate_intermittent": simulate_intermittent,
+					"operation.intermittent_success_rate": intermittent_success_rate,
+				},
+			});
+
+			try {
+				fastify.log.info({
+					request_id: requestId,
+					error_code,
+					category,
+					include_delay,
+					simulate_intermittent,
+					intermittent_success_rate,
+					custom_message,
+					msg: "#### Starting HTTP error code simulation",
+				});
+
+				span.addEvent("http_error_simulation_started", {
+					error_code: error_code || "random",
+					category,
+					include_delay,
+					simulate_intermittent,
+				});
+
+				const simulationStartTime = Date.now();
+
+				const result = await simulateHttpError(
+					error_code as HttpErrorCode,
+					category,
+					include_delay,
+					simulate_intermittent,
+					intermittent_success_rate,
+					custom_message,
+					fastify.log,
+				);
+
+				const totalSimulationTime = Date.now() - simulationStartTime;
+
+				// Record metrics
+				httpErrorCodeResponseTimeHistogram.record(result.executionTime, {
+					error_code: result.errorCode.toString(),
+					category: result.scenario.category,
+					success: result.success.toString(),
+				});
+
+				httpErrorCodeSuccessRate.add(result.success ? 1 : 0, {
+					error_code: result.errorCode.toString(),
+					category: result.scenario.category,
+					intermittent: simulate_intermittent.toString(),
+				});
+
+				// Handle success case (intermittent simulation succeeded)
+				if (result.success && simulate_intermittent) {
+					span.setAttributes({
+						"simulation.result": "success",
+						"simulation.intermittent_success": true,
+						"simulation.execution_time_ms": result.executionTime,
+					});
+
+					span.addEvent("http_error_simulation_completed", {
+						final_result: "success",
+						intermittent_success: true,
+						error_code: result.errorCode,
+					});
+
+					fastify.log.info({
+						request_id: requestId,
+						error_code: result.errorCode,
+						execution_time_ms: result.executionTime,
+						msg: "#### HTTP error simulation completed with intermittent success",
+					});
+
+					return reply.code(200).send({
+						success: true,
+						data: {
+							request_id: requestId,
+							error_code: result.errorCode,
+							category: result.scenario.category,
+							scenario_name: result.scenario.name,
+							description: result.scenario.description,
+							execution_time_ms: result.executionTime,
+							should_retry: result.scenario.should_retry,
+							typical_causes: result.scenario.typical_causes,
+							metadata: {
+								delay_range_ms: result.scenario.delay_range,
+								actual_delay_ms: result.actualDelay,
+								intermittent_simulation: result.intermittentSimulation,
+								success_rate: intermittent_success_rate,
+								additional_headers: result.scenario.additional_headers,
+							},
+						},
+					});
+				}
+
+				// Handle error case - return with the actual error code
+				span.setAttributes({
+					"simulation.result": "error",
+					"simulation.error_code": result.errorCode,
+					"simulation.execution_time_ms": result.executionTime,
+				});
+
+				span.addEvent("http_error_simulation_completed", {
+					final_result: "error",
+					error_code: result.errorCode,
+					scenario: result.scenario.name,
+				});
+
+				// Prepare error response
+				const errorMessage =
+					custom_message ||
+					`Simulated ${result.scenario.name}: ${result.scenario.description}`;
+
+				const errorResponse = {
+					success: false as const,
+					error: errorMessage,
+					error_details: {
+						request_id: requestId,
+						attempted_error_code: result.errorCode,
+						scenario_name: result.scenario.name,
+						execution_time_ms: result.executionTime,
+						retry_recommendation: result.scenario.should_retry
+							? "This error can be retried with exponential backoff"
+							: "This error should not be retried",
+						typical_causes: result.scenario.typical_causes,
+						recovery_suggestion: getRecoverySuggestion(result.errorCode),
+					},
+				};
+
+				// Set response headers if specified
+				if (result.scenario.additional_headers) {
+					for (const [key, value] of Object.entries(
+						result.scenario.additional_headers,
+					)) {
+						reply.header(key, value);
+					}
+				}
+
+				fastify.log.info({
+					request_id: requestId,
+					error_code: result.errorCode,
+					scenario_name: result.scenario.name,
+					execution_time_ms: result.executionTime,
+					should_retry: result.scenario.should_retry,
+					msg: `#### HTTP ${result.errorCode} error simulation completed`,
+				});
+
+				return reply.code(result.errorCode).send(errorResponse);
+			} catch (error) {
+				// Unexpected simulation error
+				span.recordException(error as Error);
+				span.setStatus({ code: 2, message: (error as Error).message });
+
+				fastify.log.error({
+					request_id: requestId,
+					error: error,
+					msg: "#### Unexpected error in HTTP error simulation",
+				});
+
+				return reply.code(500).send({
+					success: false,
+					error: `Unexpected error in HTTP error simulation: ${(error as Error).message}`,
+					error_details: {
+						request_id: requestId,
+						attempted_error_code: error_code || 0,
+						scenario_name: "simulation_error",
+						execution_time_ms: 0,
+						retry_recommendation: "Check server logs and retry",
+						typical_causes: [
+							"Simulation engine error",
+							"Invalid configuration",
+						],
+						recovery_suggestion:
+							"Check server logs for detailed error information",
+					},
+				});
+			} finally {
+				span.end();
+			}
+		},
+	);
+
+	// Helper function for recovery suggestions
+	function getRecoverySuggestion(errorCode: number): string {
+		const scenario = HTTP_ERROR_SCENARIOS[errorCode as HttpErrorCode];
+		if (!scenario) return "Check server logs and contact support";
+
+		switch (scenario.category) {
+			case "4xx":
+				return errorCode === 401
+					? "Check authentication credentials and refresh tokens"
+					: errorCode === 403
+						? "Ensure proper permissions or contact administrator"
+						: errorCode === 404
+							? "Verify the resource exists and URL is correct"
+							: errorCode === 409
+								? "Handle conflict resolution and retry"
+								: errorCode === 422
+									? "Validate request data and fix validation errors"
+									: errorCode === 429
+										? "Implement exponential backoff and respect rate limits"
+										: "Fix request format and validate input data";
+			case "5xx":
+				return errorCode === 500
+					? "Check server logs and retry with exponential backoff"
+					: errorCode === 502
+						? "Check upstream service availability and configuration"
+						: errorCode === 503
+							? "Wait for service recovery and implement retry logic"
+							: errorCode === 504
+								? "Increase timeout values and optimize request"
+								: errorCode === 507
+									? "Clear disk space or contact administrator"
+									: errorCode === 508
+										? "Check for circular dependencies in configuration"
+										: "Contact support and check system status";
+			default:
+				return "Check server logs and contact support";
+		}
+	}
 };
 
 export default errorsRoute;

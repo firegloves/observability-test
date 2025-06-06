@@ -651,6 +651,72 @@ This test suite generates data specifically designed to compare observability pl
 - **Fallback Response**: 503 Service Unavailable when circuit breaker is open
 - **Response Codes**: 200 (success), 408 (timeout), 503 (circuit breaker open)
 
+### **🚨 HTTP Error Code Scenarios - Comprehensive Error Response Testing**
+
+**What it simulates**: Complete HTTP error response scenarios (4xx client errors and 5xx server errors)  
+**What you can observe**:
+
+- **Error Classification**: How observability tools categorize different error types
+- **Error Rate Tracking**: 4xx vs 5xx error distribution and patterns
+- **Retry Logic Testing**: Which errors trigger retries vs immediate failures
+- **Intermittent Failure Patterns**: 5xx errors with occasional success simulation
+- **Error Response Headers**: Proper header handling (WWW-Authenticate, Retry-After, etc.)
+- **Recovery Recommendations**: Context-aware error recovery guidance
+
+**Available Error Codes**:
+
+**4xx Client Errors** (65% of HTTP error tests - should NOT be retried):
+- **400 Bad Request** (15%): Invalid JSON, missing fields, malformed requests
+- **401 Unauthorized** (10%): Missing/expired auth tokens, invalid credentials
+- **403 Forbidden** (8%): Insufficient permissions, IP blocking, rate limiting
+- **404 Not Found** (12%): Invalid endpoints, deleted resources, wrong URLs
+- **409 Conflict** (5%): Duplicate creation, concurrent modifications
+- **422 Unprocessable Entity** (7%): Business logic validation failures
+- **429 Too Many Requests** (8%): Rate limits, quota exceeded, burst limits
+
+**5xx Server Errors** (35% of HTTP error tests - CAN be retried):
+- **500 Internal Server Error** (10%): Unhandled exceptions, application bugs
+- **502 Bad Gateway** (8%): Upstream failures, invalid responses
+- **503 Service Unavailable** (7%): Overload, maintenance mode
+- **504 Gateway Timeout** (5%): Upstream timeouts, slow queries
+- **507 Insufficient Storage** (3%): Disk full, storage quotas
+- **508 Loop Detected** (2%): Circular dependencies, recursive calls
+
+**Advanced Features**:
+- **Intermittent Success**: 5xx errors can simulate occasional success (10-20% success rate)
+- **Realistic Delays**: Error-specific delay ranges (50ms-15s based on error type)
+- **Proper Headers**: Includes relevant HTTP headers for each error type
+- **Recovery Guidance**: Specific recovery suggestions per error code
+- **Retry Recommendations**: Clear guidance on retry vs no-retry scenarios
+
+**Configuration Options**:
+- **error_code**: Target specific HTTP error code (optional)
+- **category**: "4xx", "5xx", or "all" for random selection
+- **include_delay**: Apply realistic delays (default: true)
+- **simulate_intermittent**: Enable intermittent success for 5xx (default: false)
+- **intermittent_success_rate**: Success rate for intermittent simulation (0.1-0.3)
+- **custom_message**: Override default error messages
+
+**Key Insights for Teams**:
+- **Frontend Teams**: Error handling patterns and user experience impact
+- **Backend Teams**: Error response consistency and proper HTTP semantics
+- **SRE Teams**: Error rate monitoring, alerting thresholds, and recovery automation
+- **API Teams**: Error documentation, client retry logic, and error categorization
+
+**What to watch for**:
+- **Error Distribution**: Proper 4xx vs 5xx categorization in monitoring
+- **Retry Behavior**: Only 5xx errors (and 409, 429) should trigger retries
+- **Header Handling**: Proper WWW-Authenticate, Retry-After header processing
+- **Intermittent Success**: 5xx errors occasionally succeeding (realistic failure patterns)
+- **Response Times**: Error-appropriate delays (auth errors fast, storage errors slower)
+- **Recovery Suggestions**: Context-aware error recovery recommendations
+
+**Expected Behavior**:
+- **4xx Errors**: Fast responses (30-500ms), no retries, clear client-side fixes
+- **5xx Errors**: Variable delays (500ms-15s), retry-eligible, server-side issues
+- **Intermittent 5xx**: Occasional 200 responses for 500/502/503 errors
+- **Headers**: Proper authentication challenges, rate limit info, retry timing
+
 ---
 
 ### **🧠 CPU Intensive Operations - Computational Performance Analysis**
