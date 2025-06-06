@@ -7,11 +7,73 @@ import {
 import {
 	SEMATTRS_CODE_FILEPATH,
 	SEMATTRS_CODE_FUNCTION,
+	SEMATTRS_HTTP_METHOD,
+	SEMATTRS_HTTP_ROUTE,
 } from "@opentelemetry/semantic-conventions";
 import { getAppTracer } from "./tracing";
 
 /**
- * Executes a function within an active OpenTelemetry span.
+ * Extract custom span attributes from Fastify request
+ * This enhances tracing with user context and operation metadata
+ */
+export function extractCustomSpanAttributes(
+	request: any,
+): Record<string, string | number | boolean> {
+	const attributes: Record<string, string | number | boolean> = {};
+
+	// Extract user_id from headers or request context
+	const userId = request.headers["x-user-id"] || request.headers["user-id"];
+	if (userId) {
+		attributes["user.id"] = userId;
+		attributes["user.session"] = request.headers["x-user-session"] || "unknown";
+	}
+
+	// Extract operation_type from request body or headers
+	const operationType =
+		request.body?.operation_type ||
+		request.body?.computation_type ||
+		request.body?.timeout_type ||
+		request.body?.error_type ||
+		request.body?.failure_type ||
+		request.headers["x-operation-type"];
+	if (operationType) {
+		attributes["operation.type"] = operationType;
+	}
+
+	// Extract additional context from headers
+	const testContext =
+		request.headers["x-performance-test"] ||
+		request.headers["x-database-test"] ||
+		request.headers["x-cpu-test"];
+	if (testContext) {
+		attributes["test.context"] = testContext;
+	}
+
+	// Add request metadata
+	if (request.method) {
+		attributes[SEMATTRS_HTTP_METHOD] = request.method;
+	}
+	if (request.routerPath) {
+		attributes[SEMATTRS_HTTP_ROUTE] = request.routerPath;
+	}
+	if (request.url) {
+		attributes["http.url"] = request.url;
+	}
+	if (request.ip) {
+		attributes["http.client_ip"] = request.ip;
+	}
+
+	// Add request ID if available
+	const requestId = request.id || request.headers["x-request-id"];
+	if (requestId) {
+		attributes["request.id"] = requestId;
+	}
+
+	return attributes;
+}
+
+/**
+ * Executes a function within an active OpenTelemetry span with custom attributes.
  *
  * This utility function creates a new span, executes the provided function within that span,
  * and properly handles any errors by recording them as span events.
@@ -62,6 +124,32 @@ export async function withActiveSpanWithAttributes<T>(
 				span.end();
 			}
 		},
+	);
+}
+
+/**
+ * Executes a function within an active OpenTelemetry span with automatic custom attributes extraction.
+ *
+ * This version automatically extracts user_id, operation_type and other context from the request.
+ *
+ * @param name - The name of the span to create
+ * @param request - Fastify request object for extracting custom attributes
+ * @param fn - The function to execute within the span
+ * @param additionalAttributes - Additional custom attributes to merge
+ */
+export async function withActiveSpanWithContext<T>(
+	name: string,
+	request: any,
+	fn: (span: Span) => Promise<T>,
+	additionalAttributes: Record<string, string | number | boolean> = {},
+): Promise<T> {
+	const customAttributes = extractCustomSpanAttributes(request);
+	const mergedAttributes = { ...customAttributes, ...additionalAttributes };
+
+	return withActiveSpanWithAttributes(
+		name,
+		{ attributes: mergedAttributes },
+		fn,
 	);
 }
 

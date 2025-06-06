@@ -74,11 +74,12 @@ k6 run --stage 1m:5 --stage 3m:15 --stage 2m:25 --stage 2m:10 --stage 1m:0 load-
 - **Duration**: 17 minutes (configurable)
 - **Load Pattern**: Ramp up → Steady → Peak → Ramp down
 - **Scenarios**:
-  - 50% Read operations (fetch books, health checks)
+  - 45% Read operations (fetch books, health checks)
   - 20% Write operations (create reviews)
-  - 15% **Database heavy operations** (NEW!)
+  - 15% **Database heavy operations**
   - 10% Performance testing (slow endpoint with various latencies)
   - 5% Error simulation
+  - 5% **Custom span attributes tracing** (NEW!)
 
 #### **Database Heavy Operations Test** (NEW!)
 - **Files**: 
@@ -100,6 +101,27 @@ k6 run --stage 1m:5 --stage 3m:15 --stage 2m:25 --stage 2m:10 --stage 1m:0 load-
   - Performance impact classification
   - Detailed execution time logging
   - Custom span attributes for filtering
+
+#### **Custom Span Attributes Tracing Test** (NEW!)
+- **Files**: 
+  - `scenarios/modules/tracing-scenarios.js` - Tracing operations module
+  - Integrated in `scenarios/baseline-performance.js`
+- **Duration**: 5% of total test time
+- **Operations**:
+  - **80% Attributes Test**: Custom span attributes extraction and validation
+  - **20% Nested Operations**: Parent-child span hierarchy testing
+- **Tracing Features**:
+  - **User Context**: Automatic extraction of `user.id` and `user.session` from headers
+  - **Operation Types**: `user_authentication`, `data_processing`, `external_api_call`, `database_query`, `cache_operation`
+  - **Custom Metadata**: Dynamic metadata injection for testing
+  - **Span Hierarchy**: Parent-child relationships with attribute inheritance
+  - **Performance Tracking**: Attribute extraction timing and span creation metrics
+- **Observability Features**:
+  - Automatic span enhancement with user context
+  - Operation-specific attributes and events
+  - Trace hierarchy validation
+  - Custom attribute extraction timing
+  - Span context correlation (trace_id, span_id)
 
 #### **Load Stages**:
 1. **Ramp up**: 2 min → 10 users
@@ -165,6 +187,13 @@ k6 run --stage 1m:5 --stage 3m:15 --stage 2m:25 --stage 2m:10 --stage 1m:0 load-
   - `timeout_circuit_breaker_events`: Circuit breaker state change events
   - `timeout_scenario_duration_actual`: Actual processing time vs timeout threshold
   - `timeout_circuit_breaker_state_changes`: Circuit breaker state transitions by service
+
+- **Custom Span Attributes Tracing Metrics** (NEW!):
+  - `tracing_test_requests_total`: Total tracing test requests by operation type and complexity
+  - `tracing_attribute_extraction_time_ms`: Time to extract custom attributes from requests
+  - `tracing_span_creation_time_ms`: Span creation and enhancement timing by operation type
+  - `tracing_nested_operations_time_ms`: Nested operations execution time by child count
+  - `tracing_success_rate`: Overall tracing scenario success rate
 
 ## 🎯 Test Thresholds
 

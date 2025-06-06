@@ -17,6 +17,7 @@ import { ENV } from "../env";
 import routes from "../route";
 import { container } from "./container";
 import containerPlugin from "./container";
+import tracingEnhancementPlugin from "../observability/tracingPlugin";
 
 export async function start() {
 	// Initialize Fastify with a logger
@@ -30,6 +31,9 @@ export async function start() {
 	// setup automatic fastify instrumentation
 	const fastifyOtelInstrumentation = new FastifyOtelInstrumentation();
 	await app.register(fastifyOtelInstrumentation.plugin());
+
+	// Register tracing enhancement plugin for custom span attributes
+	await app.register(tracingEnhancementPlugin);
 
 	// Configure Fastify to use Zod for validation and serialization
 	app.setValidatorCompiler(validatorCompiler);

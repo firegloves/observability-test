@@ -12,8 +12,8 @@ This document tracks the implementation progress of the observability testing ap
 ### **Step 2: Error Scenarios**
 - [X] 2.1 Database connection errors ✅
 - [X] 2.2 Timeout scenarios ✅
-- [ ] 2.3 Cascading failures
-- [ ] 2.4 Different HTTP error codes (4xx, 5xx)
+- [X] 2.3 Cascading failures ✅
+- [X] 2.4 Different HTTP error codes (4xx, 5xx) ✅
 
 ### **Step 3: Enhanced Tracing**
 - [ ] 3.1 Custom span attributes (user_id, operation_type)

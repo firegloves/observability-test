@@ -3093,6 +3093,333 @@
           }
         }
       }
+    },
+    "/v1/tracing/test-attributes": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "operation_type": {
+                    "type": "string",
+                    "enum": [
+                      "user_authentication",
+                      "data_processing",
+                      "external_api_call",
+                      "database_query",
+                      "cache_operation"
+                    ],
+                    "default": "data_processing"
+                  },
+                  "test_payload": {
+                    "type": "object",
+                    "properties": {
+                      "size": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 1000,
+                        "default": 100
+                      },
+                      "complexity": {
+                        "type": "string",
+                        "enum": [
+                          "simple",
+                          "medium",
+                          "complex"
+                        ],
+                        "default": "medium"
+                      },
+                      "simulate_processing_time": {
+                        "type": "boolean",
+                        "default": true
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "custom_metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "operation_type": {
+                          "type": "string"
+                        },
+                        "execution_time_ms": {
+                          "type": "number"
+                        },
+                        "extracted_attributes": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "span_context": {
+                          "type": "object",
+                          "properties": {
+                            "trace_id": {
+                              "type": "string"
+                            },
+                            "span_id": {
+                              "type": "string"
+                            },
+                            "has_custom_attributes": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "has_custom_attributes"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "user_context": {
+                          "type": "object",
+                          "properties": {
+                            "user_id": {
+                              "type": "string"
+                            },
+                            "session_id": {
+                              "type": "string"
+                            },
+                            "test_context": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "metadata": {
+                          "type": "object",
+                          "properties": {
+                            "timestamp": {
+                              "type": "string"
+                            },
+                            "attributes_count": {
+                              "type": "number"
+                            },
+                            "processing_duration_ms": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "timestamp",
+                            "attributes_count",
+                            "processing_duration_ms"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "operation_type",
+                        "execution_time_ms",
+                        "extracted_attributes",
+                        "span_context",
+                        "user_context",
+                        "metadata"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tracing/nested-operations": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "parent_operation": {
+                    "type": "string",
+                    "default": "parent_task"
+                  },
+                  "child_operations": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "default": [
+                      "child_task_1",
+                      "child_task_2"
+                    ]
+                  },
+                  "depth": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "default": 2
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "parent_operation": {
+                          "type": "string"
+                        },
+                        "child_results": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "operation": {
+                                "type": "string"
+                              },
+                              "execution_time_ms": {
+                                "type": "number"
+                              },
+                              "attributes_inherited": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "operation",
+                              "execution_time_ms",
+                              "attributes_inherited"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "total_execution_time_ms": {
+                          "type": "number"
+                        },
+                        "trace_hierarchy": {
+                          "type": "object",
+                          "properties": {
+                            "parent_span_id": {
+                              "type": "string"
+                            },
+                            "child_span_ids": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "parent_operation",
+                        "child_results",
+                        "total_execution_time_ms",
+                        "trace_hierarchy"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "servers": []

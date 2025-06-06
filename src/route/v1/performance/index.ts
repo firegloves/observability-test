@@ -12,7 +12,10 @@ import {
 	getMeterCounter,
 	getMeterHistogram,
 } from "../../../observability/metricHelper";
-import { withActiveSpan } from "../../../observability/spanHelper";
+import {
+	withActiveSpan,
+	withActiveSpanWithContext,
+} from "../../../observability/spanHelper";
 import type {
 	DatabaseHeavyUseCase,
 	DatabaseHeavyError,
@@ -351,34 +354,38 @@ const route: FastifyPluginAsync = async (fastify) => {
 					route: "/performance/slow",
 				});
 
-				await withActiveSpan(`SlowEndpoint.${operation_type}`, async (span) => {
-					// Add custom span attributes
-					span.setAttributes({
-						"operation.type": operation_type,
-						"operation.latency_ms": latency_ms,
-						"endpoint.name": "slow",
-						"test.scenario": "performance",
-					});
+				await withActiveSpanWithContext(
+					`SlowEndpoint.${operation_type}`,
+					request,
+					async (span) => {
+						// Add endpoint-specific span attributes
+						span.setAttributes({
+							"operation.latency_ms": latency_ms,
+							"endpoint.name": "slow",
+							"test.scenario": "performance",
+						});
 
-					// Record latency simulation start
-					const latencyStart = process.hrtime();
+						// Record latency simulation start
+						const latencyStart = process.hrtime();
 
-					// Simulate the requested latency
-					await simulateDelay(latency_ms);
+						// Simulate the requested latency
+						await simulateDelay(latency_ms);
 
-					// Record actual latency simulation duration
-					const latencyDuration = process.hrtime(latencyStart);
-					const latencySeconds = latencyDuration[0] + latencyDuration[1] / 1e9;
-					latencySimulationHistogram.record(latencySeconds, {
-						operation_type,
-					});
+						// Record actual latency simulation duration
+						const latencyDuration = process.hrtime(latencyStart);
+						const latencySeconds =
+							latencyDuration[0] + latencyDuration[1] / 1e9;
+						latencySimulationHistogram.record(latencySeconds, {
+							operation_type,
+						});
 
-					// Add span event
-					span.addEvent("latency_simulation_completed", {
-						requested_ms: latency_ms,
-						actual_ms: latencySeconds * 1000,
-					});
-				});
+						// Add span event
+						span.addEvent("latency_simulation_completed", {
+							requested_ms: latency_ms,
+							actual_ms: latencySeconds * 1000,
+						});
+					},
+				);
 
 				const actualDuration = Date.now() - requestStart;
 				const totalDuration = process.hrtime(startTime);
@@ -472,12 +479,12 @@ const route: FastifyPluginAsync = async (fastify) => {
 					| Result<DatabaseHeavyResponse, DatabaseHeavyError>
 					| undefined;
 
-				await withActiveSpan(
+				await withActiveSpanWithContext(
 					`DatabaseHeavy.${databaseRequest.operation_type}`,
+					request,
 					async (span) => {
-						// Add custom span attributes
+						// Add endpoint-specific span attributes
 						span.setAttributes({
-							"operation.type": databaseRequest.operation_type,
 							"operation.limit": databaseRequest.limit || 0,
 							"operation.delay_seconds": databaseRequest.delay_seconds || 0,
 							"operation.aggregation_type":
@@ -613,12 +620,12 @@ const route: FastifyPluginAsync = async (fastify) => {
 				let iterationsCompleted = 0;
 				let cpuUtilization = 0;
 
-				await withActiveSpan(
+				await withActiveSpanWithContext(
 					`CpuIntensive.${computation_type}`,
+					request,
 					async (span) => {
-						// Add custom span attributes
+						// Add endpoint-specific span attributes
 						span.setAttributes({
-							"operation.type": computation_type,
 							"operation.intensity": intensity,
 							"operation.iterations": iterations || 0,
 							"endpoint.name": "cpu",

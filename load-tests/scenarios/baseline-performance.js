@@ -42,6 +42,13 @@ import {
 	getHttpErrorScenarios,
 } from "./modules/http-error-scenarios.js";
 
+// Import tracing scenarios
+import {
+	executeTracingAttributesTest,
+	executeMixedTracingScenarios,
+	validateTracingEndpoints,
+} from "./modules/tracing-scenarios.js";
+
 // Custom metrics for observability comparison
 const customSuccessRate = new Counter("custom_success_requests");
 const customErrorRate = new Counter("custom_error_requests");
@@ -90,6 +97,19 @@ export function setup() {
 		// Non-blocking - we can continue without HTTP error scenarios
 	}
 
+	// Validate tracing scenarios are available
+	console.log("🔍 Validating tracing scenarios setup...");
+	try {
+		const tracingValidation = validateTracingEndpoints(currentEnv.baseUrl);
+		if (!tracingValidation) {
+			throw new Error("Tracing scenarios endpoints not responding");
+		}
+		console.log("✅ Tracing scenarios validation passed");
+	} catch (error) {
+		console.error(`❌ Tracing scenarios validation failed: ${error.message}`);
+		// Non-blocking - we can continue without tracing scenarios
+	}
+
 	console.log("🚀 Starting baseline performance tests...");
 	return {
 		env: currentEnv,
@@ -132,6 +152,9 @@ export default function () {
 			break;
 		case "http_error_codes":
 			executeHttpErrorCodeScenario(session);
+			break;
+		case "tracing_attributes":
+			executeTracingScenario(session);
 			break;
 	}
 
@@ -474,6 +497,40 @@ function executeCpuIntensiveScenario(session) {
 		} catch (e) {
 			// Silent fail for logging
 		}
+	} else {
+		customErrorRate.add(1);
+	}
+
+	const totalTime = Date.now() - startTime;
+	endpointResponseTime.add(totalTime);
+}
+
+/**
+ * Execute tracing custom attributes scenario
+ */
+function executeTracingScenario(session) {
+	console.log("🔍 Testing custom span attributes tracing");
+
+	const startTime = Date.now();
+
+	// 80% attributes test, 20% nested operations test
+	const useAttributesTest = Math.random() < 0.8;
+
+	let result;
+	if (useAttributesTest) {
+		result = executeTracingAttributesTest(currentEnv.baseUrl, session);
+	} else {
+		result = executeMixedTracingScenarios(currentEnv.baseUrl, session);
+	}
+
+	const tracingCheck = check(result, {
+		"Tracing scenario responded": () => result.success !== undefined,
+		"Tracing response time < 5000ms": () => result.response_time < 5000,
+		"Tracing scenario succeeded": () => result.success === true,
+	});
+
+	if (tracingCheck) {
+		customSuccessRate.add(1);
 	} else {
 		customErrorRate.add(1);
 	}
