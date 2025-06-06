@@ -1580,6 +1580,382 @@
           }
         }
       }
+    },
+    "/v1/errors/cascading/scenarios": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "scenarios": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "failure_type": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "initial_service": {
+                                "type": "string"
+                              },
+                              "cascade_steps": {
+                                "type": "number"
+                              },
+                              "recovery_strategy": {
+                                "type": "string"
+                              },
+                              "expected_impact": {
+                                "type": "string",
+                                "enum": [
+                                  "low",
+                                  "medium",
+                                  "high",
+                                  "critical"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "failure_type",
+                              "name",
+                              "description",
+                              "initial_service",
+                              "cascade_steps",
+                              "recovery_strategy",
+                              "expected_impact"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "total_scenarios": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "scenarios",
+                        "total_scenarios"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/errors/cascading": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "failure_type": {
+                    "type": "string",
+                    "enum": [
+                      "auth_service_down",
+                      "database_overload",
+                      "external_api_failure",
+                      "memory_leak_cascade",
+                      "network_partition"
+                    ]
+                  },
+                  "force_cascade": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "max_cascade_depth": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10,
+                    "default": 5
+                  },
+                  "cascade_delay_multiplier": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 5,
+                    "default": 1
+                  },
+                  "enable_recovery_simulation": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "stop_on_first_recovery": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                },
+                "required": [
+                  "failure_type"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "request_id": {
+                          "type": "string"
+                        },
+                        "failure_type": {
+                          "type": "string"
+                        },
+                        "scenario_name": {
+                          "type": "string"
+                        },
+                        "initial_service": {
+                          "type": "string"
+                        },
+                        "cascade_steps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "step_index": {
+                                "type": "number"
+                              },
+                              "service": {
+                                "type": "string"
+                              },
+                              "failure_type": {
+                                "type": "string"
+                              },
+                              "execution_time_ms": {
+                                "type": "number"
+                              },
+                              "propagation_delay_ms": {
+                                "type": "number"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "success",
+                                  "failed",
+                                  "recovered"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "step_index",
+                              "service",
+                              "failure_type",
+                              "execution_time_ms",
+                              "propagation_delay_ms",
+                              "status"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "total_execution_time_ms": {
+                          "type": "number"
+                        },
+                        "total_affected_services": {
+                          "type": "number"
+                        },
+                        "recovery_strategy": {
+                          "type": "string"
+                        },
+                        "expected_impact": {
+                          "type": "string"
+                        },
+                        "recovery_time_ms": {
+                          "type": "number"
+                        },
+                        "metadata": {
+                          "type": "object",
+                          "properties": {
+                            "cascade_depth_reached": {
+                              "type": "number"
+                            },
+                            "services_failed": {
+                              "type": "number"
+                            },
+                            "services_recovered": {
+                              "type": "number"
+                            },
+                            "max_cascade_depth": {
+                              "type": "number"
+                            },
+                            "cascade_delay_multiplier": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "cascade_depth_reached",
+                            "services_failed",
+                            "services_recovered",
+                            "max_cascade_depth",
+                            "cascade_delay_multiplier"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "request_id",
+                        "failure_type",
+                        "scenario_name",
+                        "initial_service",
+                        "cascade_steps",
+                        "total_execution_time_ms",
+                        "total_affected_services",
+                        "recovery_strategy",
+                        "expected_impact",
+                        "recovery_time_ms",
+                        "metadata"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_details": {
+                      "type": "object",
+                      "properties": {
+                        "request_id": {
+                          "type": "string"
+                        },
+                        "failure_type": {
+                          "type": "string"
+                        },
+                        "initial_service": {
+                          "type": "string"
+                        },
+                        "cascade_step_failed": {
+                          "type": "number"
+                        },
+                        "failed_service": {
+                          "type": "string"
+                        },
+                        "error_code": {
+                          "type": "string"
+                        },
+                        "total_execution_time_ms": {
+                          "type": "number"
+                        },
+                        "partial_cascade_steps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "step_index": {
+                                "type": "number"
+                              },
+                              "service": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "success",
+                                  "failed",
+                                  "recovered"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "step_index",
+                              "service",
+                              "status"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "recovery_suggestion": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "request_id",
+                        "failure_type",
+                        "initial_service",
+                        "cascade_step_failed",
+                        "failed_service",
+                        "error_code",
+                        "total_execution_time_ms",
+                        "partial_cascade_steps",
+                        "recovery_suggestion"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error",
+                    "error_details"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "servers": []

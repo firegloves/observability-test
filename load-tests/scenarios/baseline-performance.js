@@ -32,6 +32,9 @@ import {
 	validateErrorScenariosSetup,
 } from "./modules/database-error-scenarios.js";
 
+// Import cascading failure scenarios
+import { executeMixedCascadingFailureScenarios } from "./modules/cascading-failure-scenarios.js";
+
 // Custom metrics for observability comparison
 const customSuccessRate = new Counter("custom_success_requests");
 const customErrorRate = new Counter("custom_error_requests");
@@ -85,6 +88,9 @@ export default function () {
 			break;
 		case "cpu_intensive":
 			executeCpuIntensiveScenario(session);
+			break;
+		case "cascading_failure":
+			executeCascadingFailureScenario(session);
 			break;
 	}
 
@@ -155,6 +161,33 @@ function executeReadScenario(session) {
 	});
 
 	if (booksCheck) {
+		customSuccessRate.add(1);
+	} else {
+		customErrorRate.add(1);
+	}
+
+	const totalTime = Date.now() - startTime;
+	endpointResponseTime.add(totalTime);
+}
+
+/**
+ * Execute cascading failure scenario
+ */
+function executeCascadingFailureScenario(session) {
+	console.log("💥 Testing cascading failure scenarios");
+
+	const startTime = Date.now();
+
+	const response = executeMixedCascadingFailureScenarios();
+
+	const cascadingCheck = check(response, {
+		"cascading scenario responded": (r) =>
+			r.status === 200 || r.status === 500 || r.status === 408,
+		"cascading scenario response time < 50000ms": (r) =>
+			r.timings.duration < 50000,
+	});
+
+	if (cascadingCheck) {
 		customSuccessRate.add(1);
 	} else {
 		customErrorRate.add(1);

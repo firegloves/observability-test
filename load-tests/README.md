@@ -139,6 +139,14 @@ k6 run --stage 1m:5 --stage 3m:15 --stage 2m:25 --stage 2m:10 --stage 1m:0 load-
   - `cpu_utilization_estimate`: CPU utilization estimate by operation
   - `cpu_custom_iterations_total`: Operations using custom iteration counts
 
+- **Cascading Failure Metrics**:
+  - `cascading_failure_requests_total`: Total cascade simulations by failure type
+  - `cascading_failure_steps_total`: Number of cascade steps completed per scenario
+  - `cascading_failure_services_affected`: Total services impacted per cascade
+  - `cascading_failure_recovery_rate`: Percentage of services that recovered during cascade
+  - `cascading_failure_execution_time_ms`: Total cascade execution time
+  - `cascading_failure_depth_reached`: Actual cascade depth vs configured maximum
+
 - **Database Error Scenario Metrics**:
   - `database_errors_requests_total`: Total error scenario requests by type and context
   - `database_errors_errors_total`: Failed error scenario attempts with error codes
@@ -420,6 +428,86 @@ This test suite generates data specifically designed to compare observability pl
 - **Circuit Breaker Isolation**: Independent state per timeout_type + service_context combination
 - **Map Iteration Compatibility**: Uses `forEach` instead of `entries()` for ES5 compatibility
 - **Custom Metrics**: 7 timeout-specific metrics for comprehensive monitoring
+
+---
+
+### **🔄 Cascading Failure Scenarios - Service Dependency Chain Failure Testing**
+
+**What it simulates**: Multi-service failure chains and system-wide cascading effects  
+**What you can observe**:
+
+- **Failure Propagation Patterns**: How failures spread through service dependencies
+- **System Resilience**: Overall system behavior under cascading conditions
+- **Recovery Mechanisms**: Service-level and system-level recovery strategies
+- **Service Isolation**: Whether failures are properly contained or spread uncontrolled
+- **Impact Assessment**: Business impact of different cascading failure scenarios
+
+**Key Insights for Teams**:
+- **SRE Teams**: Service dependency mapping and failure containment validation
+- **Architecture Teams**: System design resilience and service isolation assessment
+- **DevOps Teams**: Recovery automation and incident response effectiveness
+- **Product Teams**: User experience impact during multi-service failures
+
+**Cascading Failure Types & Expected Behavior**:
+
+1. **Authentication Service Cascade (25% of tests)**
+   - **Initial Service**: Auth Service
+   - **Cascade Steps**: 3 (Auth → User Service → API Gateway)
+   - **Expected Impact**: High (critical user-facing services)
+   - **Recovery Strategy**: Service restart sequence
+   - **What to watch**: Authentication failure propagation and user session impact
+
+2. **Database Overload Cascade (30% of tests)**
+   - **Initial Service**: Database
+   - **Cascade Steps**: 4 (Database → Connection Pool → Application → Load Balancer)
+   - **Expected Impact**: Critical (affects entire system)
+   - **Recovery Strategy**: Database scaling and circuit breaker activation
+   - **What to watch**: Resource exhaustion propagation and scaling response
+
+3. **External API Dependency Cascade (20% of tests)**
+   - **Initial Service**: Payment API
+   - **Cascade Steps**: 3 (Payment → Order Service → Inventory)
+   - **Expected Impact**: Medium (business process disruption)
+   - **Recovery Strategy**: Fallback and retry mechanisms
+   - **What to watch**: External dependency isolation and fallback effectiveness
+
+4. **Memory Leak Induced Cascade (15% of tests)**
+   - **Initial Service**: Analytics Service
+   - **Cascade Steps**: 4 (Analytics → Logging → Monitoring → Cluster)
+   - **Expected Impact**: Critical (resource exhaustion)
+   - **Recovery Strategy**: Service restart and resource cleanup
+   - **What to watch**: Resource leak detection and automated remediation
+
+5. **Network Partition Cascade (10% of tests)**
+   - **Initial Service**: Network Infrastructure
+   - **Cascade Steps**: 4 (Network → DB Replica → Cache → Session Store)
+   - **Expected Impact**: High (cross-region connectivity)
+   - **Recovery Strategy**: Failover to secondary region
+   - **What to watch**: Network resilience and regional failover capabilities
+
+**Configuration Options & Testing Features**:
+- **force_cascade**: Control deterministic vs probabilistic failure propagation
+- **max_cascade_depth**: Limit cascade depth (1-10 steps) for controlled testing
+- **cascade_delay_multiplier**: Adjust timing (0.1x-5.0x) for different load scenarios
+- **enable_recovery_simulation**: Test recovery mechanisms during cascade
+- **stop_on_first_recovery**: Validate early recovery interruption scenarios
+
+**Custom Metrics & Observability**:
+- **cascading_failure_requests_total**: Total cascade simulations by type
+- **cascading_failure_steps_total**: Number of cascade steps completed
+- **cascading_failure_services_affected**: Total services impacted per scenario
+- **cascading_failure_recovery_rate**: Percentage of services that recovered
+- **cascading_failure_execution_time_ms**: Total cascade execution time
+- **cascading_failure_depth_reached**: Actual cascade depth vs configured maximum
+
+**What to watch for**:
+- **Cascade Containment**: Failures should be isolated and not spread indefinitely
+- **Recovery Effectiveness**: Services should recover according to configured strategies
+- **Timing Accuracy**: Cascade propagation delays should match realistic scenarios
+- **Service Isolation**: Independent services shouldn't be affected by unrelated cascades
+- **Recovery Rate**: At least 20-40% of services should show recovery behavior
+- **Execution Time**: Full cascades should complete within 40 seconds maximum
+- **Impact Assessment**: Critical cascades should be identified and handled differently
 
 ---
 
@@ -716,6 +804,16 @@ export default function () {
 - **Route Handler Types**: Proper generic types added for request body and response validation
 - **Circuit Breaker Enhancement**: Improved error-safe iteration through circuit breaker states
 - **Code Quality Improvements**: Template literals, proper exponential notation, cleaner conditionals
+
+### 🔄 Cascading Failure Implementation (Step 2.3 Completion)
+
+- **5 Cascading Failure Scenarios**: Auth service, database overload, external API, memory leak, network partition
+- **Advanced Configuration Options**: Force cascade, depth control, delay multipliers, recovery simulation
+- **Comprehensive OpenTelemetry Integration**: Custom spans, metrics, and attributes for cascade tracking
+- **K6 Testing Integration**: Full test coverage with weighted scenario distribution (5% of total tests)
+- **Recovery Simulation**: Probabilistic recovery mechanisms with configurable stop-on-first-recovery
+- **Service Isolation Testing**: Independent cascade chains with realistic propagation delays
+- **6 Custom Metrics**: Request tracking, step counting, service impact, recovery rates, execution time, depth analysis
 
 ### 🎯 Test Results (Latest Run)
 

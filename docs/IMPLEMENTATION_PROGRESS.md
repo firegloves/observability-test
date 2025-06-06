@@ -10,8 +10,8 @@ This document tracks the implementation progress of the observability testing ap
 - [X] 1.3 CPU intensive endpoint (simple computation) ✅
 
 ### **Step 2: Error Scenarios**
-- [ ] 2.1 Database connection errors
-- [ ] 2.2 Timeout scenarios
+- [X] 2.1 Database connection errors ✅
+- [X] 2.2 Timeout scenarios ✅
 - [ ] 2.3 Cascading failures
 - [ ] 2.4 Different HTTP error codes (4xx, 5xx)
 

@@ -85,12 +85,13 @@ export function generateUserSession() {
  */
 export function getScenarioWeights() {
 	return {
-		read_heavy: 0.4, // 40% read operations (fetch books) - reduced slightly
+		read_heavy: 0.35, // 35% read operations (fetch books) - reduced to accommodate cascading failures
 		write_operations: 0.2, // 20% write operations (create reviews)
 		performance_test: 0.1, // 10% performance testing (slow endpoint)
 		database_heavy: 0.1, // 10% database heavy operations
 		cpu_intensive: 0.1, // 10% CPU intensive operations
 		error_simulation: 0.1, // 10% comprehensive error scenarios (database errors + timeouts)
+		cascading_failure: 0.05, // 5% cascading failure scenarios
 	};
 }
 

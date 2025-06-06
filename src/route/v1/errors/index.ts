@@ -59,6 +59,37 @@ const circuitBreakerStateGauge = meter.createUpDownCounter(
 	},
 );
 
+// Cascading Failure Metrics
+const cascadingFailureRequestsCounter = meter.createCounter(
+	"cascading_failure_requests_total",
+	{
+		description: "Total cascading failure simulation requests",
+	},
+);
+
+const cascadingFailureStepsHistogram = meter.createHistogram(
+	"cascading_failure_steps_count",
+	{
+		description: "Number of failure steps in cascading failure scenarios",
+	},
+);
+
+const cascadingFailureRecoveryTime = meter.createHistogram(
+	"cascading_failure_recovery_time_seconds",
+	{
+		description: "Time taken to recover from cascading failures",
+		unit: "s",
+	},
+);
+
+const serviceFailureCounter = meter.createCounter(
+	"service_failure_events_total",
+	{
+		description:
+			"Total individual service failure events during cascading scenarios",
+	},
+);
+
 // =============================================================================
 // DATABASE ERROR SCENARIOS
 // =============================================================================
@@ -164,8 +195,174 @@ const TIMEOUT_SCENARIOS = {
 	},
 } as const;
 
+// =============================================================================
+// CASCADING FAILURE SCENARIOS
+// =============================================================================
+
+const CASCADING_FAILURE_SCENARIOS = {
+	auth_service_down: {
+		name: "Authentication Service Cascade",
+		description:
+			"Auth service failure causing user service and API gateway failures",
+		initial_service: "auth_service",
+		cascade_chain: [
+			{
+				service: "auth_service",
+				failure_type: "service_unavailable",
+				delay_ms: 500,
+				propagation_delay_ms: 1000,
+			},
+			{
+				service: "user_service",
+				failure_type: "dependency_timeout",
+				delay_ms: 2000,
+				propagation_delay_ms: 1500,
+			},
+			{
+				service: "api_gateway",
+				failure_type: "cascade_timeout",
+				delay_ms: 5000,
+				propagation_delay_ms: 2000,
+			},
+		],
+		recovery_strategy: "service_restart_sequence",
+		expected_impact: "high",
+	},
+	database_overload: {
+		name: "Database Overload Cascade",
+		description:
+			"Database overload causing connection pool exhaustion and service degradation",
+		initial_service: "database",
+		cascade_chain: [
+			{
+				service: "database",
+				failure_type: "performance_degradation",
+				delay_ms: 1000,
+				propagation_delay_ms: 500,
+			},
+			{
+				service: "connection_pool",
+				failure_type: "pool_exhaustion",
+				delay_ms: 3000,
+				propagation_delay_ms: 1000,
+			},
+			{
+				service: "application_layer",
+				failure_type: "response_timeout",
+				delay_ms: 8000,
+				propagation_delay_ms: 2000,
+			},
+			{
+				service: "load_balancer",
+				failure_type: "health_check_failure",
+				delay_ms: 12000,
+				propagation_delay_ms: 3000,
+			},
+		],
+		recovery_strategy: "database_scaling_and_circuit_breaker",
+		expected_impact: "critical",
+	},
+	external_api_failure: {
+		name: "External API Dependency Cascade",
+		description:
+			"External payment API failure affecting order processing and inventory",
+		initial_service: "payment_api",
+		cascade_chain: [
+			{
+				service: "payment_api",
+				failure_type: "external_timeout",
+				delay_ms: 30000,
+				propagation_delay_ms: 500,
+			},
+			{
+				service: "order_service",
+				failure_type: "dependency_failure",
+				delay_ms: 5000,
+				propagation_delay_ms: 2000,
+			},
+			{
+				service: "inventory_service",
+				failure_type: "transaction_rollback",
+				delay_ms: 2000,
+				propagation_delay_ms: 1000,
+			},
+		],
+		recovery_strategy: "fallback_and_retry",
+		expected_impact: "medium",
+	},
+	memory_leak_cascade: {
+		name: "Memory Leak Induced Cascade",
+		description:
+			"Memory leak in one service causing system-wide resource exhaustion",
+		initial_service: "analytics_service",
+		cascade_chain: [
+			{
+				service: "analytics_service",
+				failure_type: "memory_exhaustion",
+				delay_ms: 2000,
+				propagation_delay_ms: 1000,
+			},
+			{
+				service: "logging_service",
+				failure_type: "resource_contention",
+				delay_ms: 4000,
+				propagation_delay_ms: 1500,
+			},
+			{
+				service: "monitoring_service",
+				failure_type: "metrics_collection_failure",
+				delay_ms: 6000,
+				propagation_delay_ms: 2000,
+			},
+			{
+				service: "application_cluster",
+				failure_type: "oom_killer_activation",
+				delay_ms: 10000,
+				propagation_delay_ms: 3000,
+			},
+		],
+		recovery_strategy: "service_restart_and_resource_cleanup",
+		expected_impact: "critical",
+	},
+	network_partition: {
+		name: "Network Partition Cascade",
+		description:
+			"Network partition between data centers causing cross-region failures",
+		initial_service: "network_infrastructure",
+		cascade_chain: [
+			{
+				service: "network_infrastructure",
+				failure_type: "partition_detected",
+				delay_ms: 100,
+				propagation_delay_ms: 200,
+			},
+			{
+				service: "database_replica",
+				failure_type: "replication_lag",
+				delay_ms: 5000,
+				propagation_delay_ms: 1000,
+			},
+			{
+				service: "cache_cluster",
+				failure_type: "cache_invalidation",
+				delay_ms: 2000,
+				propagation_delay_ms: 800,
+			},
+			{
+				service: "session_store",
+				failure_type: "session_loss",
+				delay_ms: 1000,
+				propagation_delay_ms: 500,
+			},
+		],
+		recovery_strategy: "failover_to_secondary_region",
+		expected_impact: "high",
+	},
+} as const;
+
 type ErrorScenarioType = keyof typeof ERROR_SCENARIOS;
 type TimeoutType = keyof typeof TIMEOUT_SCENARIOS;
+type CascadingFailureType = keyof typeof CASCADING_FAILURE_SCENARIOS;
 type ServiceContext =
 	| "external_api"
 	| "database"
@@ -445,10 +642,109 @@ const TimeoutScenariosListResponseSchema =
 		}),
 	});
 
+// =============================================================================
+// REQUEST/RESPONSE SCHEMAS - CASCADING FAILURE SCENARIOS
+// =============================================================================
+
+const CascadingFailureRequestSchema = z.object({
+	failure_type: z.enum([
+		"auth_service_down",
+		"database_overload",
+		"external_api_failure",
+		"memory_leak_cascade",
+		"network_partition",
+	]),
+	force_cascade: z.boolean().optional().default(false),
+	max_cascade_depth: z.number().int().min(1).max(10).optional().default(5),
+	cascade_delay_multiplier: z
+		.number()
+		.min(0.1)
+		.max(5.0)
+		.optional()
+		.default(1.0),
+	enable_recovery_simulation: z.boolean().optional().default(true),
+	stop_on_first_recovery: z.boolean().optional().default(false),
+});
+
+const CascadingFailureSuccessResponseSchema =
+	GENERIC_SUCCESS_RESPONSE_SCHEMA.extend({
+		data: z.object({
+			request_id: z.string(),
+			failure_type: z.string(),
+			scenario_name: z.string(),
+			initial_service: z.string(),
+			cascade_steps: z.array(
+				z.object({
+					step_index: z.number(),
+					service: z.string(),
+					failure_type: z.string(),
+					execution_time_ms: z.number(),
+					propagation_delay_ms: z.number(),
+					status: z.enum(["success", "failed", "recovered"]),
+				}),
+			),
+			total_execution_time_ms: z.number(),
+			total_affected_services: z.number(),
+			recovery_strategy: z.string(),
+			expected_impact: z.string(),
+			recovery_time_ms: z.number(),
+			metadata: z.object({
+				cascade_depth_reached: z.number(),
+				services_failed: z.number(),
+				services_recovered: z.number(),
+				max_cascade_depth: z.number(),
+				cascade_delay_multiplier: z.number(),
+			}),
+		}),
+	});
+
+const CascadingFailureErrorResponseSchema =
+	GENERIC_ERROR_RESPONSE_SCHEMA.extend({
+		error_details: z.object({
+			request_id: z.string(),
+			failure_type: z.string(),
+			initial_service: z.string(),
+			cascade_step_failed: z.number(),
+			failed_service: z.string(),
+			error_code: z.string(),
+			total_execution_time_ms: z.number(),
+			partial_cascade_steps: z.array(
+				z.object({
+					step_index: z.number(),
+					service: z.string(),
+					status: z.enum(["success", "failed", "recovered"]),
+				}),
+			),
+			recovery_suggestion: z.string(),
+		}),
+	});
+
+const CascadingFailureScenariosListResponseSchema =
+	GENERIC_SUCCESS_RESPONSE_SCHEMA.extend({
+		data: z.object({
+			scenarios: z.array(
+				z.object({
+					failure_type: z.string(),
+					name: z.string(),
+					description: z.string(),
+					initial_service: z.string(),
+					cascade_steps: z.number(),
+					recovery_strategy: z.string(),
+					expected_impact: z.enum(["low", "medium", "high", "critical"]),
+				}),
+			),
+			total_scenarios: z.number(),
+		}),
+	});
+
 // Type definitions
 type DatabaseErrorRequest = z.infer<typeof DATABASE_ERROR_REQUEST_SCHEMA>;
 type DatabaseErrorResponse = z.infer<typeof DATABASE_ERROR_RESPONSE_SCHEMA>;
 type ScenariosListResponse = z.infer<typeof SCENARIOS_LIST_RESPONSE_SCHEMA>;
+type CascadingFailureRequest = z.infer<typeof CascadingFailureRequestSchema>;
+type CascadingFailureResponse =
+	| z.infer<typeof CascadingFailureSuccessResponseSchema>
+	| z.infer<typeof CascadingFailureErrorResponseSchema>;
 
 // =============================================================================
 // UTILITY FUNCTIONS
@@ -475,6 +771,267 @@ async function simulateProcessingTime(
 	const processingTime = Math.random() * (timeoutMs * 0.8); // 0%-80% of threshold
 	await new Promise((resolve) => setTimeout(resolve, processingTime));
 	return { timedOut: false, processingTime };
+}
+
+// Helper function to simulate cascading failures
+async function simulateCascadingFailure(
+	failureType: CascadingFailureType,
+	forceCascade: boolean,
+	maxCascadeDepth: number,
+	cascadeDelayMultiplier: number,
+	enableRecoverySimulation: boolean,
+	stopOnFirstRecovery: boolean,
+	logger: FastifyBaseLogger,
+): Promise<{
+	success: boolean;
+	cascadeSteps: Array<{
+		step_index: number;
+		service: string;
+		failure_type: string;
+		execution_time_ms: number;
+		propagation_delay_ms: number;
+		status: "success" | "failed" | "recovered";
+	}>;
+	totalExecutionTime: number;
+	totalAffectedServices: number;
+	recoveryTime: number;
+	metadata: {
+		cascade_depth_reached: number;
+		services_failed: number;
+		services_recovered: number;
+		max_cascade_depth: number;
+		cascade_delay_multiplier: number;
+	};
+}> {
+	const scenario = CASCADING_FAILURE_SCENARIOS[failureType];
+	const startTime = Date.now();
+	const cascadeSteps: Array<{
+		step_index: number;
+		service: string;
+		failure_type: string;
+		execution_time_ms: number;
+		propagation_delay_ms: number;
+		status: "success" | "failed" | "recovered";
+	}> = [];
+
+	let servicesFailedCount = 0;
+	let servicesRecoveredCount = 0;
+	let cascadeDepthReached = 0;
+
+	const span = tracer.startSpan(`CascadingFailure.${failureType}`, {
+		attributes: {
+			"failure.type": failureType,
+			"failure.scenario": scenario.name,
+			"failure.initial_service": scenario.initial_service,
+			"operation.force_cascade": forceCascade,
+			"operation.max_cascade_depth": maxCascadeDepth,
+			"operation.cascade_delay_multiplier": cascadeDelayMultiplier,
+		},
+	});
+
+	try {
+		logger.info({
+			failure_type: failureType,
+			scenario_name: scenario.name,
+			initial_service: scenario.initial_service,
+			force_cascade: forceCascade,
+			max_cascade_depth: maxCascadeDepth,
+			msg: `#### Starting cascading failure simulation: ${scenario.name}`,
+		});
+
+		// Process each step in the cascade chain
+		for (
+			let i = 0;
+			i < Math.min(scenario.cascade_chain.length, maxCascadeDepth);
+			i++
+		) {
+			const step = scenario.cascade_chain[i];
+			if (!step) {
+				throw new Error(`Step ${i} is undefined`);
+			}
+			const stepStartTime = Date.now();
+			cascadeDepthReached = i + 1;
+
+			const stepSpan = tracer.startSpan(`CascadeStep.${step.service}`, {
+				attributes: {
+					"cascade.step_index": i + 1,
+					"cascade.service": step.service,
+					"cascade.failure_type": step.failure_type,
+					"cascade.delay_ms": step.delay_ms,
+					"cascade.propagation_delay_ms": step.propagation_delay_ms,
+				},
+			});
+
+			try {
+				logger.info({
+					step_index: i + 1,
+					service: step.service,
+					failure_type: step.failure_type,
+					delay_ms: step.delay_ms * cascadeDelayMultiplier,
+					msg: `#### Executing cascade step ${i + 1}: ${step.service}`,
+				});
+
+				// Simulate the failure delay (adjusted by multiplier)
+				const adjustedDelay = step.delay_ms * cascadeDelayMultiplier;
+				await new Promise((resolve) => setTimeout(resolve, adjustedDelay));
+
+				// Determine if this step succeeds, fails, or recovers
+				let stepStatus: "success" | "failed" | "recovered" = "failed";
+
+				if (enableRecoverySimulation && i > 0) {
+					// Later steps have a chance to recover (20% base chance + 10% per step)
+					const recoveryChance = 0.2 + i * 0.1;
+					if (!forceCascade && Math.random() < recoveryChance) {
+						stepStatus = "recovered";
+						servicesRecoveredCount++;
+
+						logger.info({
+							step_index: i + 1,
+							service: step.service,
+							recovery_chance: recoveryChance,
+							msg: `#### Service ${step.service} recovered during cascade`,
+						});
+
+						if (stopOnFirstRecovery) {
+							logger.info({
+								step_index: i + 1,
+								service: step.service,
+								msg: "#### Stopping cascade due to recovery (stop_on_first_recovery=true)",
+							});
+						}
+					}
+				}
+
+				if (stepStatus === "failed") {
+					servicesFailedCount++;
+
+					// Check if we should continue the cascade
+					if (forceCascade || Math.random() < 0.8) {
+						// 80% chance to continue cascade
+						logger.info({
+							step_index: i + 1,
+							service: step.service,
+							msg: `#### Service ${step.service} failed, cascade continues`,
+						});
+					} else {
+						stepStatus = "success"; // Natural recovery
+						logger.info({
+							step_index: i + 1,
+							service: step.service,
+							msg: `#### Service ${step.service} naturally recovered, cascade stopped`,
+						});
+					}
+				}
+
+				const stepExecutionTime = Date.now() - stepStartTime;
+
+				cascadeSteps.push({
+					step_index: i + 1,
+					service: step.service,
+					failure_type: step.failure_type,
+					execution_time_ms: stepExecutionTime,
+					propagation_delay_ms:
+						step.propagation_delay_ms * cascadeDelayMultiplier,
+					status: stepStatus,
+				});
+
+				stepSpan.setAttributes({
+					"cascade.result": stepStatus,
+					"cascade.execution_time_ms": stepExecutionTime,
+				});
+
+				stepSpan.addEvent("cascade_step_completed", {
+					step_index: i + 1,
+					service: step.service,
+					result: stepStatus,
+				});
+
+				stepSpan.end();
+
+				// Simulate propagation delay before next step
+				if (
+					i < scenario.cascade_chain.length - 1 &&
+					(stepStatus === "failed" ||
+						(stepStatus === "recovered" && !stopOnFirstRecovery))
+				) {
+					const propagationDelay =
+						step.propagation_delay_ms * cascadeDelayMultiplier;
+					await new Promise((resolve) => setTimeout(resolve, propagationDelay));
+				}
+
+				// Stop cascade if recovery happened and stopOnFirstRecovery is true
+				if (stepStatus === "recovered" && stopOnFirstRecovery) {
+					break;
+				}
+
+				// Stop cascade if service naturally recovered
+				if (stepStatus === "success") {
+					break;
+				}
+			} catch (error) {
+				stepSpan.recordException(error as Error);
+				stepSpan.setStatus({ code: 2, message: (error as Error).message });
+				stepSpan.end();
+				throw error;
+			}
+		}
+
+		const totalExecutionTime = Date.now() - startTime;
+		const recoveryTime =
+			cascadeSteps.length > 0
+				? Math.max(
+						...cascadeSteps.map(
+							(step) => step.execution_time_ms + step.propagation_delay_ms,
+						),
+					)
+				: 0;
+
+		span.setAttributes({
+			"cascade.total_steps": cascadeSteps.length,
+			"cascade.services_failed": servicesFailedCount,
+			"cascade.services_recovered": servicesRecoveredCount,
+			"cascade.total_execution_time_ms": totalExecutionTime,
+			"cascade.depth_reached": cascadeDepthReached,
+		});
+
+		span.addEvent("cascading_failure_completed", {
+			total_steps: cascadeSteps.length,
+			services_failed: servicesFailedCount,
+			services_recovered: servicesRecoveredCount,
+			depth_reached: cascadeDepthReached,
+		});
+
+		logger.info({
+			failure_type: failureType,
+			total_steps: cascadeSteps.length,
+			services_failed: servicesFailedCount,
+			services_recovered: servicesRecoveredCount,
+			total_execution_time_ms: totalExecutionTime,
+			cascade_depth_reached: cascadeDepthReached,
+			msg: `#### Cascading failure simulation completed: ${scenario.name}`,
+		});
+
+		return {
+			success: true,
+			cascadeSteps,
+			totalExecutionTime,
+			totalAffectedServices: cascadeSteps.length,
+			recoveryTime,
+			metadata: {
+				cascade_depth_reached: cascadeDepthReached,
+				services_failed: servicesFailedCount,
+				services_recovered: servicesRecoveredCount,
+				max_cascade_depth: maxCascadeDepth,
+				cascade_delay_multiplier: cascadeDelayMultiplier,
+			},
+		};
+	} catch (error) {
+		span.recordException(error as Error);
+		span.setStatus({ code: 2, message: (error as Error).message });
+		throw error;
+	} finally {
+		span.end();
+	}
 }
 
 // Helper function to simulate database operations
@@ -1164,6 +1721,233 @@ const errorsRoute: FastifyPluginAsync = async (fastify) => {
 							service_context,
 						),
 						recovery_suggestion: "Check server logs and retry",
+					},
+				});
+			} finally {
+				span.end();
+			}
+		},
+	);
+
+	// =============================================================================
+	// CASCADING FAILURE SCENARIOS ENDPOINTS
+	// =============================================================================
+
+	// GET /cascading/scenarios - List available cascading failure scenarios
+	fastify.get<{
+		Reply: z.infer<typeof CascadingFailureScenariosListResponseSchema>;
+	}>(
+		"/cascading/scenarios",
+		{
+			schema: {
+				response: {
+					200: CascadingFailureScenariosListResponseSchema,
+				},
+			},
+		},
+		async (request, reply) => {
+			const scenarios = Object.entries(CASCADING_FAILURE_SCENARIOS).map(
+				([key, scenario]) => ({
+					failure_type: key,
+					name: scenario.name,
+					description: scenario.description,
+					initial_service: scenario.initial_service,
+					cascade_steps: scenario.cascade_chain.length,
+					recovery_strategy: scenario.recovery_strategy,
+					expected_impact: scenario.expected_impact,
+				}),
+			);
+
+			return reply.status(200).send({
+				success: true,
+				data: {
+					scenarios,
+					total_scenarios: scenarios.length,
+				},
+			});
+		},
+	);
+
+	// POST /cascading - Execute cascading failure scenario simulation
+	fastify.post<{
+		Body: z.infer<typeof CascadingFailureRequestSchema>;
+		Reply:
+			| z.infer<typeof CascadingFailureSuccessResponseSchema>
+			| z.infer<typeof CascadingFailureErrorResponseSchema>;
+	}>(
+		"/cascading",
+		{
+			schema: {
+				body: CascadingFailureRequestSchema,
+				response: {
+					200: CascadingFailureSuccessResponseSchema,
+					500: CascadingFailureErrorResponseSchema,
+				},
+			},
+		},
+		async (request, reply) => {
+			const {
+				failure_type,
+				force_cascade = false,
+				max_cascade_depth = 5,
+				cascade_delay_multiplier = 1.0,
+				enable_recovery_simulation = true,
+				stop_on_first_recovery = false,
+			} = request.body;
+
+			const requestId = generateRequestId();
+			const scenario = CASCADING_FAILURE_SCENARIOS[failure_type];
+
+			// Record metrics
+			cascadingFailureRequestsCounter.add(1, {
+				failure_type,
+				force_cascade: force_cascade.toString(),
+				max_cascade_depth: max_cascade_depth.toString(),
+			});
+
+			const span = tracer.startSpan("ErrorScenario.cascading_failure", {
+				attributes: {
+					"http.method": "POST",
+					"http.route": "/v1/errors/cascading",
+					"endpoint.name": "cascading_failures",
+					"test.scenario": "cascading_failure_simulation",
+					"failure.type": failure_type,
+					"failure.scenario": scenario.name,
+					"failure.initial_service": scenario.initial_service,
+					"request.id": requestId,
+					"operation.force_cascade": force_cascade,
+					"operation.max_cascade_depth": max_cascade_depth,
+					"operation.cascade_delay_multiplier": cascade_delay_multiplier,
+				},
+			});
+
+			try {
+				fastify.log.info({
+					request_id: requestId,
+					failure_type,
+					scenario_name: scenario.name,
+					initial_service: scenario.initial_service,
+					force_cascade,
+					max_cascade_depth,
+					cascade_delay_multiplier,
+					enable_recovery_simulation,
+					stop_on_first_recovery,
+					msg: `#### Starting cascading failure simulation: ${scenario.name}`,
+				});
+
+				span.addEvent("cascading_failure_started", {
+					failure_type,
+					scenario: scenario.name,
+					initial_service: scenario.initial_service,
+					force_cascade,
+					max_cascade_depth,
+				});
+
+				const cascadeStartTime = Date.now();
+
+				const result = await simulateCascadingFailure(
+					failure_type,
+					force_cascade,
+					max_cascade_depth,
+					cascade_delay_multiplier,
+					enable_recovery_simulation,
+					stop_on_first_recovery,
+					fastify.log,
+				);
+
+				const totalCascadeTime = Date.now() - cascadeStartTime;
+
+				// Record metrics
+				cascadingFailureStepsHistogram.record(result.cascadeSteps.length, {
+					failure_type,
+					initial_service: scenario.initial_service,
+				});
+
+				cascadingFailureRecoveryTime.record(result.recoveryTime / 1000, {
+					failure_type,
+					recovery_strategy: scenario.recovery_strategy,
+				});
+
+				// Count individual service failures
+				result.cascadeSteps.forEach((step) => {
+					serviceFailureCounter.add(1, {
+						service: step.service,
+						failure_type: step.failure_type,
+						status: step.status,
+					});
+				});
+
+				// Success response
+				span.setAttributes({
+					"cascade.result": "success",
+					"cascade.total_steps": result.cascadeSteps.length,
+					"cascade.services_failed": result.metadata.services_failed,
+					"cascade.services_recovered": result.metadata.services_recovered,
+					"cascade.total_execution_time_ms": result.totalExecutionTime,
+					"cascade.depth_reached": result.metadata.cascade_depth_reached,
+				});
+
+				span.addEvent("cascading_failure_completed", {
+					final_result: "success",
+					total_steps: result.cascadeSteps.length,
+					services_failed: result.metadata.services_failed,
+					services_recovered: result.metadata.services_recovered,
+					depth_reached: result.metadata.cascade_depth_reached,
+				});
+
+				fastify.log.info({
+					request_id: requestId,
+					failure_type,
+					total_steps: result.cascadeSteps.length,
+					services_failed: result.metadata.services_failed,
+					services_recovered: result.metadata.services_recovered,
+					total_execution_time_ms: result.totalExecutionTime,
+					depth_reached: result.metadata.cascade_depth_reached,
+					msg: "#### Cascading failure simulation completed successfully",
+				});
+
+				return reply.code(200).send({
+					success: true,
+					data: {
+						request_id: requestId,
+						failure_type,
+						scenario_name: scenario.name,
+						initial_service: scenario.initial_service,
+						cascade_steps: result.cascadeSteps,
+						total_execution_time_ms: result.totalExecutionTime,
+						total_affected_services: result.totalAffectedServices,
+						recovery_strategy: scenario.recovery_strategy,
+						expected_impact: scenario.expected_impact,
+						recovery_time_ms: result.recoveryTime,
+						metadata: result.metadata,
+					},
+				});
+			} catch (error) {
+				// Unexpected error
+				span.recordException(error as Error);
+				span.setStatus({ code: 2, message: (error as Error).message });
+
+				fastify.log.error({
+					request_id: requestId,
+					failure_type,
+					error: error,
+					msg: "#### Unexpected error in cascading failure simulation",
+				});
+
+				return reply.code(500).send({
+					success: false,
+					error: `Unexpected error in cascading failure simulation: ${(error as Error).message}`,
+					error_details: {
+						request_id: requestId,
+						failure_type,
+						initial_service: scenario.initial_service,
+						cascade_step_failed: 0,
+						failed_service: "simulation_engine",
+						error_code: "SIMULATION_ERROR",
+						total_execution_time_ms: 0,
+						partial_cascade_steps: [],
+						recovery_suggestion:
+							"Check server logs and retry with different parameters",
 					},
 				});
 			} finally {
