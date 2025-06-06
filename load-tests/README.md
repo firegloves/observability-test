@@ -127,11 +127,17 @@ k6 run --stage 1m:5 --stage 3m:15 --stage 2m:25 --stage 2m:10 --stage 1m:0 load-
 - `custom_error_requests`: Failed operations counter
 - `endpoint_response_time`: Response time distribution
 - `slow_endpoint_accuracy`: Latency simulation accuracy
-- **Database Heavy Metrics** (NEW!):
+- **Database Heavy Metrics**:
   - `database_heavy_operations_total`: Total database operations by type
   - `database_heavy_response_time_ms`: Response time by operation type
   - `database_heavy_success_total`: Successful database operations
   - `database_heavy_error_total`: Failed database operations
+
+- **CPU Intensive Metrics** (NEW!):
+  - `cpu_operations_total`: Total CPU operations by computation type
+  - `cpu_execution_time_ms`: Execution time by computation type and intensity
+  - `cpu_utilization_estimate`: CPU utilization estimate by operation
+  - `cpu_custom_iterations_total`: Operations using custom iteration counts
 
 ## 🎯 Test Thresholds
 
@@ -318,6 +324,44 @@ This test suite generates data specifically designed to compare observability pl
 
 ---
 
+### **🧠 CPU Intensive Operations - Computational Performance Analysis**
+
+**What it simulates**: CPU-intensive workloads and computational performance  
+**What you can observe**:
+
+- **CPU Performance Limits**: How algorithms scale under different intensities
+- **Resource Competition**: CPU vs I/O bound operations impact
+- **Algorithm Efficiency**: Performance comparison across computation types
+- **Scalability Patterns**: How computational load affects response times
+- **Custom Iterations Impact**: Performance with variable workload sizes
+
+**Key Insights for Teams**:
+- **Algorithm Teams**: Performance benchmarking and optimization targets
+- **Backend Teams**: CPU resource planning and algorithm selection
+- **SRE Teams**: CPU-based scaling and performance monitoring
+- **Architecture Teams**: Computational bottleneck identification
+
+**What to watch for**:
+- Fibonacci calculations scaling predictably with intensity levels
+- Prime calculations completing efficiently (optimized algorithms)
+- Matrix operations showing expected O(n³) behavior
+- Hash computations maintaining consistent performance
+- Custom iterations parameter working correctly for all computation types
+
+**Expected Performance Ranges**:
+- **Low intensity**: < 50ms execution time
+- **Medium intensity**: 50-500ms execution time  
+- **High intensity**: 500-2000ms execution time
+- **Extreme intensity**: 1-5 seconds execution time
+
+**CPU Utilization Monitoring**:
+- Track CPU usage correlation with computation complexity
+- Monitor for CPU throttling under sustained load
+- Validate that different computation types show distinct performance signatures
+- Ensure proper resource cleanup after intensive operations
+
+---
+
 ## 🔍 Cross-Scenario Analysis Opportunities
 
 ### **Load Progression Impact**
@@ -326,6 +370,7 @@ Compare metrics across different load stages:
 - **Error rate increase**: When does the system start failing
 - **Resource saturation**: CPU/memory thresholds identification
 - **Database behavior**: Connection pooling effectiveness
+- **CPU intensive scaling**: How computational load affects overall system performance
 
 ### **Operation Type Correlation**
 Analyze how different operations interact:

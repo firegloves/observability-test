@@ -222,13 +222,26 @@ const findPrimes = (limit: number): number[] => {
 };
 
 const multiplyMatrices = (a: number[][], b: number[][]): number[][] => {
-	const result: number[][] = [];
-	for (let i = 0; i < a.length; i++) {
-		result[i] = [];
-		for (let j = 0; j < b[0].length; j++) {
-			result[i][j] = 0;
-			for (let k = 0; k < b.length; k++) {
-				result[i][j] += a[i][k] * b[k][j];
+	if (!a.length || !b.length || !b[0] || !a[0]) {
+		return [];
+	}
+
+	const rows = a.length;
+	const cols = b[0].length;
+	const result: number[][] = Array(rows)
+		.fill(null)
+		.map(() => Array(cols).fill(0));
+
+	for (let i = 0; i < rows; i++) {
+		const resultRow = result[i];
+		const aRow = a[i];
+		if (resultRow && aRow) {
+			for (let j = 0; j < cols; j++) {
+				for (let k = 0; k < b.length; k++) {
+					const bRow = b[k];
+					// @ts-expect-error - we know that the values are numbers
+					resultRow[j] += aRow[k] * bRow[j];
+				}
 			}
 		}
 	}
@@ -239,8 +252,9 @@ const createMatrix = (size: number): number[][] => {
 	const matrix: number[][] = [];
 	for (let i = 0; i < size; i++) {
 		matrix[i] = [];
+		const currentRow = matrix[i] as number[];
 		for (let j = 0; j < size; j++) {
-			matrix[i][j] = Math.random() * 100;
+			currentRow[j] = Math.random() * 100;
 		}
 	}
 	return matrix;
@@ -578,7 +592,7 @@ const route: FastifyPluginAsync = async (fastify) => {
 		async (request, reply): Promise<CpuIntensiveResponseType> => {
 			const startTime = process.hrtime();
 			const memoryBefore = process.memoryUsage();
-
+			console.log("##### CPUUUUUUUUU");
 			try {
 				const { computation_type, intensity, iterations }: CpuIntensiveRequest =
 					request.body;
