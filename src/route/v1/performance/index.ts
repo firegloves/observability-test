@@ -52,6 +52,22 @@ const databaseQueryExecutionHistogram = getMeterHistogram(
 	"Database query execution time in seconds",
 );
 
+// CPU intensive endpoint metrics
+const cpuIntensiveCounter = getMeterCounter(
+	"cpu_intensive_requests_total",
+	"Total number of CPU intensive requests",
+);
+
+const cpuIntensiveDurationHistogram = getMeterHistogram(
+	"cpu_intensive_duration_seconds",
+	"Duration of CPU intensive operations in seconds",
+);
+
+const cpuComputationHistogram = getMeterHistogram(
+	"cpu_computation_seconds",
+	"CPU computation time in seconds",
+);
+
 // Request schema for slow endpoint
 const SLOW_REQUEST_SCHEMA = z.object({
 	latency_ms: z
@@ -89,6 +105,24 @@ const DATABASE_HEAVY_REQUEST_SCHEMA = z.object({
 		.optional(),
 });
 
+// Request schema for CPU intensive endpoint
+const CPU_INTENSIVE_REQUEST_SCHEMA = z.object({
+	computation_type: z
+		.enum([
+			"fibonacci",
+			"prime_calculation",
+			"matrix_operations",
+			"hash_computation",
+		])
+		.default("fibonacci"),
+	intensity: z.enum(["low", "medium", "high", "extreme"]).default("medium"),
+	iterations: z
+		.number()
+		.min(1, "Minimum iterations is 1")
+		.max(1000000, "Maximum iterations is 1000000")
+		.optional(),
+});
+
 // Response schemas
 const SLOW_RESPONSE_DATA_SCHEMA = z.object({
 	requested_latency_ms: z.number(),
@@ -108,6 +142,20 @@ const DATABASE_HEAVY_RESPONSE_DATA_SCHEMA = z.object({
 	}),
 });
 
+const CPU_INTENSIVE_RESPONSE_DATA_SCHEMA = z.object({
+	computation_type: z.string(),
+	intensity: z.string(),
+	execution_time_ms: z.number(),
+	cpu_utilization_estimate: z.number(),
+	result: z.unknown(), // Computation result varies by type
+	metadata: z.object({
+		timestamp: z.string(),
+		iterations_completed: z.number(),
+		memory_usage_estimate_mb: z.number(),
+		performance_impact: z.enum(["low", "medium", "high", "extreme"]),
+	}),
+});
+
 const SUCCESS_SLOW_RESPONSE_SCHEMA = GENERIC_SUCCESS_RESPONSE_SCHEMA.extend({
 	data: SLOW_RESPONSE_DATA_SCHEMA,
 });
@@ -115,6 +163,11 @@ const SUCCESS_SLOW_RESPONSE_SCHEMA = GENERIC_SUCCESS_RESPONSE_SCHEMA.extend({
 const SUCCESS_DATABASE_HEAVY_RESPONSE_SCHEMA =
 	GENERIC_SUCCESS_RESPONSE_SCHEMA.extend({
 		data: DATABASE_HEAVY_RESPONSE_DATA_SCHEMA,
+	});
+
+const SUCCESS_CPU_INTENSIVE_RESPONSE_SCHEMA =
+	GENERIC_SUCCESS_RESPONSE_SCHEMA.extend({
+		data: CPU_INTENSIVE_RESPONSE_DATA_SCHEMA,
 	});
 
 const SLOW_RESPONSE_SCHEMA = z.discriminatedUnion("success", [
@@ -127,13 +180,126 @@ const DATABASE_HEAVY_RESPONSE_SCHEMA = z.discriminatedUnion("success", [
 	GENERIC_ERROR_RESPONSE_SCHEMA,
 ]);
 
+const CPU_INTENSIVE_RESPONSE_SCHEMA = z.discriminatedUnion("success", [
+	SUCCESS_CPU_INTENSIVE_RESPONSE_SCHEMA,
+	GENERIC_ERROR_RESPONSE_SCHEMA,
+]);
+
 type SlowResponse = z.infer<typeof SLOW_RESPONSE_SCHEMA>;
 type SlowRequest = z.infer<typeof SLOW_REQUEST_SCHEMA>;
 type DatabaseHeavyResponseType = z.infer<typeof DATABASE_HEAVY_RESPONSE_SCHEMA>;
+type CpuIntensiveRequest = z.infer<typeof CPU_INTENSIVE_REQUEST_SCHEMA>;
+type CpuIntensiveResponseType = z.infer<typeof CPU_INTENSIVE_RESPONSE_SCHEMA>;
 
 // Utility function to simulate delay
 const simulateDelay = async (ms: number): Promise<void> => {
 	return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+// CPU-intensive computation functions
+const computeFibonacci = (n: number): number => {
+	if (n <= 1) return n;
+	return computeFibonacci(n - 1) + computeFibonacci(n - 2);
+};
+
+const isPrime = (num: number): boolean => {
+	if (num <= 1) return false;
+	if (num <= 3) return true;
+	if (num % 2 === 0 || num % 3 === 0) return false;
+
+	for (let i = 5; i * i <= num; i += 6) {
+		if (num % i === 0 || num % (i + 2) === 0) return false;
+	}
+	return true;
+};
+
+const findPrimes = (limit: number): number[] => {
+	const primes: number[] = [];
+	for (let i = 2; i < limit; i++) {
+		if (isPrime(i)) primes.push(i);
+	}
+	return primes;
+};
+
+const multiplyMatrices = (a: number[][], b: number[][]): number[][] => {
+	const result: number[][] = [];
+	for (let i = 0; i < a.length; i++) {
+		result[i] = [];
+		for (let j = 0; j < b[0].length; j++) {
+			result[i][j] = 0;
+			for (let k = 0; k < b.length; k++) {
+				result[i][j] += a[i][k] * b[k][j];
+			}
+		}
+	}
+	return result;
+};
+
+const createMatrix = (size: number): number[][] => {
+	const matrix: number[][] = [];
+	for (let i = 0; i < size; i++) {
+		matrix[i] = [];
+		for (let j = 0; j < size; j++) {
+			matrix[i][j] = Math.random() * 100;
+		}
+	}
+	return matrix;
+};
+
+const computeHash = (data: string, iterations: number): string => {
+	let hash = data;
+	for (let i = 0; i < iterations; i++) {
+		hash = require("node:crypto")
+			.createHash("sha256")
+			.update(hash)
+			.digest("hex");
+	}
+	return hash;
+};
+
+const getIntensityParams = (
+	intensity: string,
+	computationType: string,
+): number => {
+	const baseParams = {
+		low: {
+			fibonacci: 30,
+			prime_calculation: 1000,
+			matrix_operations: 50,
+			hash_computation: 1000,
+		},
+		medium: {
+			fibonacci: 35,
+			prime_calculation: 5000,
+			matrix_operations: 100,
+			hash_computation: 5000,
+		},
+		high: {
+			fibonacci: 40,
+			prime_calculation: 10000,
+			matrix_operations: 150,
+			hash_computation: 10000,
+		},
+		extreme: {
+			fibonacci: 42,
+			prime_calculation: 50000,
+			matrix_operations: 200,
+			hash_computation: 50000,
+		},
+	} as const;
+
+	const intensityConfig = baseParams[intensity as keyof typeof baseParams];
+	if (!intensityConfig) {
+		throw new Error(`Invalid intensity: ${intensity}`);
+	}
+
+	const param =
+		intensityConfig[computationType as keyof typeof intensityConfig];
+	if (param === undefined) {
+		throw new Error(`Invalid computation type: ${computationType}`);
+	}
+
+	return param;
 };
 
 const route: FastifyPluginAsync = async (fastify) => {
@@ -384,6 +550,194 @@ const route: FastifyPluginAsync = async (fastify) => {
 				request.log.error(
 					{ err: error, body: request.body },
 					"#### Failed to process database heavy request",
+				);
+
+				reply.status(500);
+				return {
+					success: false,
+					error: "Internal server error",
+				};
+			}
+		},
+	);
+
+	// New CPU intensive endpoint
+	app.post(
+		"/cpu",
+		{
+			schema: {
+				body: CPU_INTENSIVE_REQUEST_SCHEMA,
+				response: {
+					200: SUCCESS_CPU_INTENSIVE_RESPONSE_SCHEMA,
+					401: ERROR_401_RESPONSE_SCHEMA,
+					404: ERROR_404_RESPONSE_SCHEMA,
+					500: GENERIC_ERROR_RESPONSE_SCHEMA,
+				},
+			},
+		},
+		async (request, reply): Promise<CpuIntensiveResponseType> => {
+			const startTime = process.hrtime();
+			const memoryBefore = process.memoryUsage();
+
+			try {
+				const { computation_type, intensity, iterations }: CpuIntensiveRequest =
+					request.body;
+
+				request.log.info(
+					{ computation_type, intensity, iterations },
+					"#### Processing CPU intensive request",
+				);
+
+				// Increment request counter
+				cpuIntensiveCounter.add(1, {
+					computation_type,
+					intensity,
+					route: "/performance/cpu",
+				});
+
+				let result: unknown;
+				let iterationsCompleted = 0;
+				let cpuUtilization = 0;
+
+				await withActiveSpan(
+					`CpuIntensive.${computation_type}`,
+					async (span) => {
+						// Add custom span attributes
+						span.setAttributes({
+							"operation.type": computation_type,
+							"operation.intensity": intensity,
+							"operation.iterations": iterations || 0,
+							"endpoint.name": "cpu",
+							"test.scenario": "cpu_performance",
+						});
+
+						const computationStart = process.hrtime();
+
+						try {
+							// Get parameters based on intensity or use custom iterations
+							const param =
+								iterations || getIntensityParams(intensity, computation_type);
+
+							switch (computation_type) {
+								case "fibonacci": {
+									result = computeFibonacci(param);
+									iterationsCompleted = 1;
+									break;
+								}
+								case "prime_calculation": {
+									result = findPrimes(param);
+									iterationsCompleted = param;
+									break;
+								}
+								case "matrix_operations": {
+									const matrixA = createMatrix(param);
+									const matrixB = createMatrix(param);
+									result = multiplyMatrices(matrixA, matrixB);
+									iterationsCompleted = param * param; // Matrix size squared
+									break;
+								}
+								case "hash_computation": {
+									result = computeHash(`test-data-${Date.now()}`, param);
+									iterationsCompleted = param;
+									break;
+								}
+								default:
+									throw new Error(
+										`Unknown computation type: ${computation_type}`,
+									);
+							}
+						} catch (computationError) {
+							span.addEvent("computation_error", {
+								error:
+									computationError instanceof Error
+										? computationError.message
+										: "Unknown error",
+							});
+							throw computationError;
+						}
+
+						const computationDuration = process.hrtime(computationStart);
+						const computationSeconds =
+							computationDuration[0] + computationDuration[1] / 1e9;
+
+						// Record computation time
+						cpuComputationHistogram.record(computationSeconds, {
+							computation_type,
+							intensity,
+						});
+
+						// Estimate CPU utilization (simplified)
+						cpuUtilization = Math.min(100, computationSeconds * 20);
+
+						// Add span event with results
+						span.addEvent("cpu_computation_completed", {
+							execution_time_ms: computationSeconds * 1000,
+							iterations_completed: iterationsCompleted,
+							cpu_utilization_estimate: cpuUtilization,
+							performance_impact: intensity,
+						});
+					},
+				);
+
+				const totalDuration = process.hrtime(startTime);
+				const totalSeconds = totalDuration[0] + totalDuration[1] / 1e9;
+				const memoryAfter = process.memoryUsage();
+				const memoryUsedMb =
+					(memoryAfter.heapUsed - memoryBefore.heapUsed) / 1024 / 1024;
+
+				// Record total duration
+				cpuIntensiveDurationHistogram.record(totalSeconds, {
+					computation_type,
+					intensity,
+					success: "true",
+				});
+
+				request.log.info(
+					{
+						computation_type,
+						intensity,
+						execution_time_ms: totalSeconds * 1000,
+						iterations_completed: iterationsCompleted,
+						cpu_utilization_estimate: cpuUtilization,
+						memory_used_mb: memoryUsedMb,
+					},
+					"#### CPU intensive request completed successfully",
+				);
+
+				reply.status(200);
+				return {
+					success: true,
+					data: {
+						computation_type,
+						intensity,
+						execution_time_ms: totalSeconds * 1000,
+						cpu_utilization_estimate: cpuUtilization,
+						result,
+						metadata: {
+							timestamp: new Date().toISOString(),
+							iterations_completed: iterationsCompleted,
+							memory_usage_estimate_mb: Math.max(0, memoryUsedMb),
+							performance_impact: intensity as
+								| "low"
+								| "medium"
+								| "high"
+								| "extreme",
+						},
+					},
+				};
+			} catch (error) {
+				const totalDuration = process.hrtime(startTime);
+				const totalSeconds = totalDuration[0] + totalDuration[1] / 1e9;
+
+				cpuIntensiveDurationHistogram.record(totalSeconds, {
+					computation_type: "unknown",
+					intensity: "unknown",
+					success: "false",
+				});
+
+				request.log.error(
+					{ err: error, body: request.body },
+					"#### Failed to process CPU intensive request",
 				);
 
 				reply.status(500);

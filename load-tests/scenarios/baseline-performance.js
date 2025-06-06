@@ -14,6 +14,8 @@ import {
 	randomThinkTime,
 	generateUserSession,
 	getScenarioWeights,
+	generateDatabaseHeavyRequest,
+	generateCpuIntensiveRequest,
 } from "../utils/data-generators.js";
 
 // Import database heavy scenario
@@ -72,6 +74,9 @@ export default function () {
 				errorRate: customErrorRate,
 				endpointResponseTime: endpointResponseTime,
 			});
+			break;
+		case "cpu_intensive":
+			executeCpuIntensiveScenario(session);
 			break;
 	}
 
@@ -283,6 +288,78 @@ function executeErrorScenario(session) {
 	// For error scenarios, we count 500 status as "success"
 	if (errorCheck) {
 		customSuccessRate.add(1);
+	} else {
+		customErrorRate.add(1);
+	}
+
+	const totalTime = Date.now() - startTime;
+	endpointResponseTime.add(totalTime);
+}
+
+/**
+ * Execute CPU intensive scenario
+ */
+function executeCpuIntensiveScenario(session) {
+	const startTime = Date.now();
+	const cpuRequest = generateCpuIntensiveRequest();
+
+	console.log(
+		`🧠 CPU Intensive Test: ${cpuRequest.computation_type} | Intensity: ${cpuRequest.intensity} | User: ${session.userId}`,
+	);
+
+	if (cpuRequest.iterations) {
+		console.log(`   → Custom iterations: ${cpuRequest.iterations}`);
+	}
+
+	const response = http.post(
+		`${currentEnv.baseUrl}/v1/performance/cpu`,
+		JSON.stringify(cpuRequest),
+		{
+			headers: {
+				...defaultHeaders,
+				"X-User-Session": session.sessionId,
+				"X-CPU-Test": "true",
+			},
+		},
+	);
+
+	const cpuCheck = check(response, {
+		"cpu intensive status is 200": (r) => r.status === 200,
+		"cpu intensive response is valid": (r) => {
+			try {
+				const body = JSON.parse(r.body);
+				return body.success === true && body.data;
+			} catch (e) {
+				return false;
+			}
+		},
+		"cpu intensive response time < 10000ms": (r) => r.timings.duration < 10000, // 10 second timeout
+		"cpu intensive response has computation data": (r) => {
+			try {
+				const body = JSON.parse(r.body);
+				return (
+					body.data.computation_type &&
+					body.data.execution_time_ms &&
+					body.data.metadata &&
+					body.data.metadata.iterations_completed
+				);
+			} catch (e) {
+				return false;
+			}
+		},
+	});
+
+	if (cpuCheck) {
+		customSuccessRate.add(1);
+		// Log successful completion with performance data
+		try {
+			const body = JSON.parse(response.body);
+			console.log(
+				`   ✅ Success: ${cpuRequest.computation_type} completed in ${body.data.execution_time_ms.toFixed(2)}ms`,
+			);
+		} catch (e) {
+			// Silent fail for logging
+		}
 	} else {
 		customErrorRate.add(1);
 	}

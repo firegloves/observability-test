@@ -62,4 +62,103 @@ content-type: application/json
 
 ###
 
-http://localhost:8082/v1/simulateError
+# CPU Intensive - Fibonacci (Medium intensity)
+POST http://localhost:8081/v1/performance/cpu
+content-type: application/json
+
+{
+    "computation_type": "fibonacci",
+    "intensity": "medium"
+}
+
+###
+
+# CPU Intensive - Prime Calculation (Low intensity)
+POST http://localhost:8081/v1/performance/cpu
+content-type: application/json
+
+{
+    "computation_type": "prime_calculation",
+    "intensity": "low"
+}
+
+###
+
+# CPU Intensive - Matrix Operations (Low intensity)
+POST http://localhost:8081/v1/performance/cpu
+content-type: application/json
+
+{
+    "computation_type": "matrix_operations",
+    "intensity": "low"
+}
+
+###
+
+# CPU Intensive - Hash Computation (Medium intensity)
+POST http://localhost:8081/v1/performance/cpu
+content-type: application/json
+
+{
+    "computation_type": "hash_computation",
+    "intensity": "medium"
+}
+
+###
+
+# CPU Intensive - Custom iterations
+POST http://localhost:8081/v1/performance/cpu
+content-type: application/json
+
+{
+    "computation_type": "fibonacci",
+    "intensity": "high",
+    "iterations": 25
+}
+
+###
+
+# Database Heavy - Stats operation
+POST http://localhost:8081/v1/performance/heavy
+content-type: application/json
+
+{
+    "operation_type": "stats"
+}
+
+###
+
+# Database Heavy - Complex Join with limit
+POST http://localhost:8081/v1/performance/heavy
+content-type: application/json
+
+{
+    "operation_type": "complex_join",
+    "limit": 20
+}
+
+###
+
+# Database Heavy - Aggregation with rating analysis
+POST http://localhost:8081/v1/performance/heavy
+content-type: application/json
+
+{
+    "operation_type": "aggregation",
+    "aggregation_type": "rating_analysis"
+}
+
+###
+
+# Database Heavy - Slow query with delay
+POST http://localhost:8081/v1/performance/heavy
+content-type: application/json
+
+{
+    "operation_type": "slow_query",
+    "delay_seconds": 2
+}
+
+###
+
+http://localhost:8081/v1/simulateError

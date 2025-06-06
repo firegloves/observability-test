@@ -7,7 +7,7 @@ This document tracks the implementation progress of the observability testing ap
 ### **Step 1: Core Performance Endpoints**
 - [X] 1.1 Slow endpoint (latency configurabile 100ms-5s) ✅
 - [X] 1.2 Database heavy endpoint (multiple queries) ✅
-- [ ] 1.3 CPU intensive endpoint (simple computation)
+- [X] 1.3 CPU intensive endpoint (simple computation) ✅
 
 ### **Step 2: Error Scenarios**
 - [ ] 2.1 Database connection errors
