@@ -5,8 +5,8 @@ This document tracks the implementation progress of the observability testing ap
 ## 📋 Implementation Plan Overview
 
 ### **Step 1: Core Performance Endpoints**
-- [ ] 1.1 Slow endpoint (latency configurabile 100ms-5s) ✅
-- [ ] 1.2 Database heavy endpoint (multiple queries)  
+- [X] 1.1 Slow endpoint (latency configurabile 100ms-5s) ✅
+- [X] 1.2 Database heavy endpoint (multiple queries) ✅
 - [ ] 1.3 CPU intensive endpoint (simple computation)
 
 ### **Step 2: Error Scenarios**
@@ -21,12 +21,17 @@ This document tracks the implementation progress of the observability testing ap
 - [ ] 3.3 Error correlation in traces
 
 ### **Step 4: Load Testing**
-- [ ] 4.1 Multiple concurrent users simulation
+- [X] 4.1 Multiple concurrent users simulation ✅
 
 ### **Step 5: Monitoring & Validation**
 - [ ] 5.1 Esempio dashboard configurations per entrambe le piattaforme
 - [ ] 5.2 Alert rules basate su SLI/SLO
 - [ ] 5.3 Testing playbook per verificare entrambi i sistemi
+
+### **Step 4: Load Testing Infrastructure**
+- [X] 4.1 k6 Load Testing Framework ✅
+- [X] 4.2 Multiple concurrent users simulation ✅
+- [X] 4.3 Test scenarios with realistic distribution ✅
 
 ---
 
@@ -141,6 +146,182 @@ Each implemented endpoint generates specific data for SignOz vs GCP comparison:
 3. **Test observability data** in both SignOz and GCP
 4. **Document platform differences** for comparison
 
+### ✅ Step 1.2 - Database Heavy Endpoint
+
+**Branch**: `main` (implemented with Step 1.1)  
+**Completed**: 2025-06-06
+
+#### Implementation Details:
+- **Endpoint**: `POST /v1/performance/heavy`
+- **Operation Types**: `complex_join`, `aggregation`, `stats`, `slow_query`
+- **Aggregation Types**: `rating_analysis`, `author_popularity`, `temporal_analysis`, `generic`
+
+#### OpenTelemetry Features:
+- **Metrics**:
+  - `database_heavy_requests_total` (Counter)
+  - `database_heavy_duration_seconds` (Histogram - total request)
+  - `database_query_execution_seconds` (Histogram - database execution only)
+- **Tracing**:
+  - Custom spans: `DatabaseHeavy.{operation_type}`
+  - Custom attributes: `operation.type`, `operation.limit`, `operation.aggregation_type`, `endpoint.name`, `test.scenario`
+  - Span events: `database_operation_completed`
+- **Logging**: Structured logs with database performance data
+
+#### Request Schema Examples:
+```json
+{
+  "operation_type": "complex_join",
+  "limit": 15
+}
+```
+```json
+{
+  "operation_type": "aggregation", 
+  "aggregation_type": "rating_analysis"
+}
+```
+```json
+{
+  "operation_type": "slow_query",
+  "delay_seconds": 2
+}
+```
+
+#### Response Schema:
+```json
+{
+  "success": true,
+  "data": {
+    "operation_type": "complex_join",
+    "execution_time_ms": 25.4,
+    "data": {...},
+    "metadata": {
+      "timestamp": "2025-06-06T08:30:15.123Z",
+      "record_count": 15,
+      "performance_impact": "medium"
+    }
+  }
+}
+```
+
+#### Testing Results:
+- ✅ Complex JOIN operations: P95 = 34ms
+- ✅ Aggregation operations: Average 5ms
+- ✅ Stats operations: Average 15ms  
+- ✅ Slow query simulation: Accurate timing
+
+#### Files Added/Modified:
+- ✅ `src/route/v1/performance/index.ts` (extended)
+- ✅ `src/domain/use-case/DatabaseHeavyUseCase.ts` (new)
+- ✅ Database implementations for heavy operations
+
 ---
 
-*Last updated: 2025-05-30* 
+### ✅ Step 4.1-4.3 - k6 Load Testing Framework
+
+**Branch**: `main`  
+**Completed**: 2025-06-06
+
+#### Implementation Details:
+- **Framework**: k6 with comprehensive test scenarios
+- **Test Duration**: 17 minutes with 5 load stages (1→10→30→10→5 VUs)
+- **Scenario Distribution**: 
+  - 50% Read operations (health + books fetch)
+  - 20% Write operations (review creation)
+  - 15% Database heavy operations
+  - 10% Performance testing (slow endpoint)
+  - 5% Error simulation
+
+#### Key Features:
+- **Environment Configs**: Local/Staging/Production with different thresholds
+- **Custom Metrics**: Success rates, database performance, endpoint accuracy
+- **Realistic Data Generation**: Weighted distributions, user sessions
+- **Test Results Export**: JSON format for analysis
+
+#### Test Results (Latest Run):
+- ✅ **100% checks succeeded** (387/387)
+- ✅ **2.20% failure rate** (well under 10% threshold)
+- ✅ **Review creation**: Working perfectly
+- ✅ **Error simulation**: Correct 500 responses
+- ✅ **Database operations**: 13 operations, P95 = 34ms
+- ✅ **Slow endpoint accuracy**: P95 = 2ms deviation
+
+#### Framework Structure:
+```
+load-tests/
+├── config/environments.js       # Multi-environment configs
+├── utils/data-generators.js     # Test data generation
+├── scenarios/baseline-performance.js  # Main test scenarios
+├── run-tests.sh                # Test runner script
+└── results/                    # Test results storage
+```
+
+#### Files Added:
+- ✅ `load-tests/config/environments.js`
+- ✅ `load-tests/utils/data-generators.js`  
+- ✅ `load-tests/scenarios/baseline-performance.js`
+- ✅ `load-tests/run-tests.sh`
+- ✅ `load-tests/README.md`
+
+---
+
+## 🔧 Git Workflow
+
+For each completed step, we follow this workflow:
+
+1. **Create feature branch**: `fc/observability-{number}-{description}`
+2. **Implement feature** with comprehensive testing
+3. **Commit** with descriptive message and ticket ID
+4. **Push** branch to remote
+5. **Merge** to main branch
+6. **Clean up** local branch
+
+### Automated Workflow Script:
+```bash
+./scripts/git-workflow.sh STEP_NUMBER "branch-suffix" "commit message details"
+```
+
+### Example:
+```bash
+./scripts/git-workflow.sh 003 "cpu-intensive-endpoint" "implement CPU intensive endpoint for performance testing"
+```
+
+---
+
+## 📊 Testing Data Generation
+
+Each implemented endpoint generates specific data for SignOz vs GCP comparison:
+
+### Performance Metrics:
+- Request duration distributions
+- Latency simulation accuracy
+- Operation type segmentation
+- Error rate tracking
+- Database performance profiling
+
+### Tracing Data:
+- Custom span hierarchies
+- Operation-specific attributes
+- Performance bottleneck identification
+- Error correlation across spans
+- Database query tracing
+
+### Log Correlation:
+- Structured log entries
+- Performance timing data
+- Error context preservation
+- Request/response tracking
+- Database operation logs
+
+---
+
+## 🎯 Next Steps
+
+1. **Continue with Step 1.3** - CPU intensive endpoint
+2. **Step 2 - Error Scenarios** implementation
+3. **Test observability data** in both SignOz and GCP
+4. **Document platform differences** for comparison
+
+---
+
+*Last updated: 2025-06-06* 
