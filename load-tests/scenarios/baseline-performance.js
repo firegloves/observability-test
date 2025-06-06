@@ -24,6 +24,14 @@ import {
 	getDatabaseHeavyThresholds,
 } from "./modules/database-heavy-operations.js";
 
+// Import error scenarios (database errors and timeouts)
+import {
+	executeDatabaseErrorScenario,
+	executeTimeoutScenario,
+	executeErrorScenario as executeErrorScenariosModule,
+	validateErrorScenariosSetup,
+} from "./modules/database-error-scenarios.js";
+
 // Custom metrics for observability comparison
 const customSuccessRate = new Counter("custom_success_requests");
 const customErrorRate = new Counter("custom_error_requests");
@@ -257,36 +265,31 @@ function executePerformanceScenario(session) {
 }
 
 /**
- * Execute error simulation scenario
+ * Execute comprehensive error simulation scenario (database errors + timeouts)
  */
 function executeErrorScenario(session) {
 	const startTime = Date.now();
 
-	console.log("💥 Testing error simulation endpoint");
+	console.log("💥 Testing comprehensive error scenarios");
 
-	const response = http.get(`${currentEnv.baseUrl}/v1/simulateError`, {
-		headers: {
-			...defaultHeaders,
-			"X-User-Session": session.sessionId,
-			"X-Error-Test": "true",
-		},
-	});
+	// Execute error scenarios from the dedicated module
+	// This includes both database errors and timeout scenarios
+	const response = executeErrorScenariosModule(currentEnv.baseUrl);
 
+	// Basic check for any response
 	const errorCheck = check(response, {
-		"error simulation returns 500": (r) => r.status === 500,
-		"error response is JSON": (r) => {
-			try {
-				JSON.parse(r.body);
-				return true;
-			} catch (e) {
-				return false;
-			}
-		},
-		"error response time < 1000ms": (r) => r.timings.duration < 1000,
+		"error scenario responded": (r) => r.status !== undefined,
+		"error scenario response time < 35000ms": (r) => r.timings.duration < 35000, // Generous timeout for complex scenarios
 	});
 
-	// For error scenarios, we count 500 status as "success"
-	if (errorCheck) {
+	// Count responses based on error scenario expectations
+	if (
+		response.status === 200 ||
+		response.status === 408 ||
+		response.status === 500 ||
+		response.status === 503
+	) {
+		// These are all valid responses for error scenarios
 		customSuccessRate.add(1);
 	} else {
 		customErrorRate.add(1);

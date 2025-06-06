@@ -945,11 +945,6 @@
     },
     "/v1/errors/database": {
       "post": {
-        "summary": "Simulate database connection errors",
-        "tags": [
-          "Error Scenarios"
-        ],
-        "description": "Simulates various database connection error scenarios for testing error handling and observability",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1144,11 +1139,6 @@
     },
     "/v1/errors/database/scenarios": {
       "get": {
-        "summary": "List available database error scenarios",
-        "tags": [
-          "Error Scenarios"
-        ],
-        "description": "Returns a list of all available database error scenarios for testing",
         "responses": {
           "200": {
             "description": "Default Response",
@@ -1215,6 +1205,373 @@
                   "required": [
                     "success",
                     "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/errors/timeout/scenarios": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "scenarios": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "timeout_type": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              },
+                              "timeout_ms": {
+                                "type": "number"
+                              },
+                              "success_rate": {
+                                "type": "number"
+                              },
+                              "error_code": {
+                                "type": "string"
+                              },
+                              "circuit_breaker_threshold": {
+                                "type": "number"
+                              },
+                              "recovery_strategy": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "timeout_type",
+                              "name",
+                              "description",
+                              "timeout_ms",
+                              "success_rate",
+                              "error_code",
+                              "circuit_breaker_threshold",
+                              "recovery_strategy"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "total_scenarios": {
+                          "type": "number"
+                        },
+                        "circuit_breaker_states": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "scenarios",
+                        "total_scenarios",
+                        "circuit_breaker_states"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/errors/timeout": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "timeout_type": {
+                    "type": "string",
+                    "enum": [
+                      "client_timeout",
+                      "server_timeout",
+                      "network_timeout",
+                      "gateway_timeout",
+                      "read_timeout",
+                      "connect_timeout"
+                    ]
+                  },
+                  "force_timeout": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "custom_timeout_ms": {
+                    "type": "integer",
+                    "minimum": 100,
+                    "maximum": 30000
+                  },
+                  "service_context": {
+                    "type": "string",
+                    "enum": [
+                      "external_api",
+                      "database",
+                      "cache",
+                      "messaging",
+                      "file_system"
+                    ],
+                    "default": "external_api"
+                  },
+                  "enable_circuit_breaker": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                },
+                "required": [
+                  "timeout_type"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "request_id": {
+                          "type": "string"
+                        },
+                        "timeout_type": {
+                          "type": "string"
+                        },
+                        "scenario_name": {
+                          "type": "string"
+                        },
+                        "execution_time_ms": {
+                          "type": "number"
+                        },
+                        "service_context": {
+                          "type": "string"
+                        },
+                        "recovery_strategy": {
+                          "type": "string"
+                        },
+                        "circuit_breaker_state": {
+                          "type": "string"
+                        },
+                        "metadata": {
+                          "type": "object",
+                          "properties": {
+                            "timeout_threshold_ms": {
+                              "type": "number"
+                            },
+                            "actual_processing_time_ms": {
+                              "type": "number"
+                            },
+                            "success_probability": {
+                              "type": "number"
+                            },
+                            "circuit_breaker_enabled": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "timeout_threshold_ms",
+                            "actual_processing_time_ms",
+                            "success_probability",
+                            "circuit_breaker_enabled"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "request_id",
+                        "timeout_type",
+                        "scenario_name",
+                        "execution_time_ms",
+                        "service_context",
+                        "recovery_strategy",
+                        "circuit_breaker_state",
+                        "metadata"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_details": {
+                      "type": "object",
+                      "properties": {
+                        "request_id": {
+                          "type": "string"
+                        },
+                        "timeout_type": {
+                          "type": "string"
+                        },
+                        "error_code": {
+                          "type": "string"
+                        },
+                        "timeout_threshold_ms": {
+                          "type": "number"
+                        },
+                        "actual_execution_time_ms": {
+                          "type": "number"
+                        },
+                        "service_context": {
+                          "type": "string"
+                        },
+                        "circuit_breaker_state": {
+                          "type": "string"
+                        },
+                        "recovery_suggestion": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "request_id",
+                        "timeout_type",
+                        "error_code",
+                        "timeout_threshold_ms",
+                        "actual_execution_time_ms",
+                        "service_context",
+                        "circuit_breaker_state",
+                        "recovery_suggestion"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error",
+                    "error_details"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "error_details": {
+                      "type": "object",
+                      "properties": {
+                        "request_id": {
+                          "type": "string"
+                        },
+                        "timeout_type": {
+                          "type": "string"
+                        },
+                        "error_code": {
+                          "type": "string"
+                        },
+                        "timeout_threshold_ms": {
+                          "type": "number"
+                        },
+                        "actual_execution_time_ms": {
+                          "type": "number"
+                        },
+                        "service_context": {
+                          "type": "string"
+                        },
+                        "circuit_breaker_state": {
+                          "type": "string"
+                        },
+                        "recovery_suggestion": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "request_id",
+                        "timeout_type",
+                        "error_code",
+                        "timeout_threshold_ms",
+                        "actual_execution_time_ms",
+                        "service_context",
+                        "circuit_breaker_state",
+                        "recovery_suggestion"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error",
+                    "error_details"
                   ],
                   "additionalProperties": false
                 }

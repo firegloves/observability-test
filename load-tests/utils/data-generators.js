@@ -90,8 +90,7 @@ export function getScenarioWeights() {
 		performance_test: 0.1, // 10% performance testing (slow endpoint)
 		database_heavy: 0.1, // 10% database heavy operations
 		cpu_intensive: 0.1, // 10% CPU intensive operations
-		database_errors: 0.05, // 5% database error scenarios (NEW!)
-		error_simulation: 0.05, // 5% error scenarios
+		error_simulation: 0.1, // 10% comprehensive error scenarios (database errors + timeouts)
 	};
 }
 

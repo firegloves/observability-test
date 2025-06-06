@@ -139,15 +139,24 @@ k6 run --stage 1m:5 --stage 3m:15 --stage 2m:25 --stage 2m:10 --stage 1m:0 load-
   - `cpu_utilization_estimate`: CPU utilization estimate by operation
   - `cpu_custom_iterations_total`: Operations using custom iteration counts
 
-- **Database Error Scenario Metrics** (NEW!):
-  - `database_error_requests_total`: Total error scenario requests by type and context
-  - `database_error_errors_total`: Failed error scenario attempts with error codes
-  - `database_error_recoveries_total`: Successful error recoveries by type
-  - `database_error_success_rate`: Overall error scenario success rate by type
-  - `database_error_recovery_rate`: Recovery success rate by error type
-  - `database_error_execution_time_ms`: Total execution time including retries
-  - `database_error_recovery_time_ms`: Time to recover from errors
-  - `database_error_retry_attempts`: Number of retry attempts per scenario
+- **Database Error Scenario Metrics**:
+  - `database_errors_requests_total`: Total error scenario requests by type and context
+  - `database_errors_errors_total`: Failed error scenario attempts with error codes
+  - `database_errors_recoveries_total`: Successful error recoveries by type
+  - `database_errors_success_rate`: Overall error scenario success rate by type
+  - `database_errors_recovery_rate`: Recovery success rate by error type
+  - `database_errors_execution_time_ms`: Total execution time including retries
+  - `database_errors_recovery_time_ms`: Time to recover from errors
+  - `database_errors_retry_attempts`: Number of retry attempts per scenario
+
+- **Timeout Scenario Metrics** (NEW!):
+  - `timeout_scenario_requests_total`: Total timeout requests by scenario and service context
+  - `timeout_scenario_errors_total`: Failed timeout operations by error type
+  - `timeout_scenario_success_rate`: Success rate by timeout scenario type
+  - `timeout_scenario_execution_time_ms`: Execution time distribution for timeout tests
+  - `timeout_circuit_breaker_events`: Circuit breaker state change events
+  - `timeout_scenario_duration_actual`: Actual processing time vs timeout threshold
+  - `timeout_circuit_breaker_state_changes`: Circuit breaker state transitions by service
 
 ## 🎯 Test Thresholds
 
@@ -344,6 +353,76 @@ This test suite generates data specifically designed to compare observability pl
 
 ---
 
+### **⏱️ Timeout Scenarios - Timeout Handling & Circuit Breaker Testing**
+
+**What it simulates**: Various timeout conditions with circuit breaker patterns and resilience testing  
+**What you can observe**:
+
+- **Timeout Detection Accuracy**: How well the system detects and handles different timeout types
+- **Circuit Breaker Effectiveness**: Protection mechanisms under timeout stress
+- **Service Context Impact**: How timeouts affect different service layers
+- **Recovery Strategy Validation**: Different timeout recovery approaches
+- **Custom Timeout Handling**: User-defined timeout thresholds behavior
+
+**Key Insights for Teams**:
+- **Backend Teams**: Timeout configuration and handling robustness
+- **SRE Teams**: Circuit breaker tuning and failover mechanisms
+- **DevOps Teams**: Service mesh timeout configuration
+- **QA Teams**: Non-functional timeout requirement validation
+
+**Timeout Types & Expected Behavior**:
+
+1. **Client Timeout (5s threshold)**
+   - **Success Rate**: ~20% (client gives up waiting)
+   - **Circuit Breaker**: Opens after 5 failures
+   - **Recovery**: Immediate retry strategy
+   - **Use Case**: Frontend request timeouts
+
+2. **Server Timeout (10s threshold)**
+   - **Success Rate**: ~30% (server processing too slow)
+   - **Circuit Breaker**: Opens after 3 failures
+   - **Recovery**: Exponential backoff
+   - **Use Case**: Backend processing timeouts
+
+3. **Network Timeout (3s threshold)**
+   - **Success Rate**: ~15% (network communication issues)
+   - **Circuit Breaker**: Opens after 7 failures
+   - **Recovery**: Circuit breaker with fallback
+   - **Use Case**: Inter-service communication
+
+4. **Gateway Timeout (15s threshold)**
+   - **Success Rate**: ~10% (proxy/gateway issues)
+   - **Circuit Breaker**: Opens after 2 failures
+   - **Recovery**: Circuit breaker protection
+   - **Use Case**: API gateway scenarios
+
+5. **Read Timeout (2s threshold)**
+   - **Success Rate**: ~25% (socket read issues)
+   - **Circuit Breaker**: Opens after 4 failures
+   - **Recovery**: Retry with jitter
+   - **Use Case**: Data reception timeouts
+
+6. **Connect Timeout (1s threshold)**
+   - **Success Rate**: ~5% (connection establishment issues)
+   - **Circuit Breaker**: Opens after 10 failures
+   - **Recovery**: Exponential backoff with limit
+   - **Use Case**: Initial connection timeouts
+
+**What to watch for**:
+- Timeout detection within configured thresholds
+- Circuit breaker state transitions working correctly
+- Independent circuit breakers per service context
+- Proper error responses (408 for timeouts, 503 for circuit breaker open)
+- Recovery suggestions matching configured strategies
+
+**🔧 Technical Implementation Notes**:
+- **TypeScript Compatibility**: All schema definitions are Fastify-compatible (no OpenAPI properties)
+- **Circuit Breaker Isolation**: Independent state per timeout_type + service_context combination
+- **Map Iteration Compatibility**: Uses `forEach` instead of `entries()` for ES5 compatibility
+- **Custom Metrics**: 7 timeout-specific metrics for comprehensive monitoring
+
+---
+
 ### **🔥 Database Error Scenarios - Error Recovery & Resilience Testing**
 
 **What it simulates**: Database connection errors, network issues, and recovery mechanisms  
@@ -406,6 +485,83 @@ This test suite generates data specifically designed to compare observability pl
 - **Retry Attempts**: Average under 3 attempts per operation
 - **Error Correlation**: Clear traces connecting errors to root causes
 - **Recovery Time**: Fast recovery when possible (under 10 seconds)
+
+---
+
+### **⏱️ Timeout Scenarios - Circuit Breaker & Resilience Testing**
+
+**What it simulates**: Various timeout conditions with circuit breaker patterns and resilience testing  
+**What you can observe**:
+
+- **Circuit Breaker Behavior**: Automatic service protection under timeout conditions
+- **Timeout Handling**: Different timeout scenarios and recovery strategies
+- **Service Resilience**: How systems behave under various timeout pressures
+- **Recovery Patterns**: Circuit breaker state transitions and auto-recovery
+- **Fallback Mechanisms**: Alternative responses when services are unavailable
+
+**Key Insights for Teams**:
+- **Backend Teams**: Timeout configuration and circuit breaker tuning
+- **Platform Teams**: Service-to-service communication resilience
+- **SRE Teams**: Service degradation patterns and recovery automation
+- **Infrastructure Teams**: Network timeout optimization and failover behavior
+
+**Timeout Scenarios & Expected Behavior**:
+
+1. **Client Timeout (25% of timeout tests)**
+   - **Timeout**: 5 seconds (client gives up waiting)
+   - **Success Rate**: ~20% (80% timeout rate)
+   - **Circuit Breaker**: Trips after 5 failures
+   - **Recovery**: Immediate retry strategy
+
+2. **Server Timeout (20% of timeout tests)**
+   - **Timeout**: 10 seconds (server processing too slow)
+   - **Success Rate**: ~30% (70% timeout rate)
+   - **Circuit Breaker**: Trips after 3 failures
+   - **Recovery**: Exponential backoff strategy
+
+3. **Network Timeout (20% of timeout tests)**
+   - **Timeout**: 3 seconds (network transmission failure)
+   - **Success Rate**: ~15% (85% timeout rate)
+   - **Circuit Breaker**: Trips after 7 failures
+   - **Recovery**: Circuit breaker with fallback
+
+4. **Gateway Timeout (15% of timeout tests)**
+   - **Timeout**: 15 seconds (API gateway/proxy timeout)
+   - **Success Rate**: ~10% (90% timeout rate)
+   - **Circuit Breaker**: Trips after 2 failures
+   - **Recovery**: Full circuit breaker protection
+
+5. **Read Timeout (12% of timeout tests)**
+   - **Timeout**: 2 seconds (socket read timeout)
+   - **Success Rate**: ~25% (75% timeout rate)
+   - **Circuit Breaker**: Trips after 4 failures
+   - **Recovery**: Retry with jitter
+
+6. **Connect Timeout (8% of timeout tests)**
+   - **Timeout**: 1 second (connection establishment)
+   - **Success Rate**: ~5% (95% timeout rate)
+   - **Circuit Breaker**: Trips after 10 failures
+   - **Recovery**: Exponential backoff with limit
+
+**Circuit Breaker Features**:
+- **States**: Closed (normal) → Open (failing) → Half-Open (testing)
+- **Auto-Recovery**: 30-second timeout for circuit breaker reset attempts
+- **Service Context**: Independent breakers per service (`external_api`, `database`, `cache`, `messaging`, `file_system`)
+- **Observability**: Full metrics tracking state changes and recovery patterns
+
+**Configuration Options**:
+- **force_timeout**: Deterministic timeout testing (80% of tests)
+- **custom_timeout_ms**: Override default timeout thresholds
+- **service_context**: Target different service types for context-aware testing
+- **enable_circuit_breaker**: Toggle circuit breaker protection
+
+**What to watch for**:
+- **Timeout Distribution**: Proper timeout handling across different scenarios
+- **Circuit Breaker Activity**: Breaker opening/closing based on failure thresholds
+- **Recovery Time**: Service recovery within 30-60 seconds of breaker reset
+- **Service Isolation**: Independent circuit breaker behavior per service context
+- **Fallback Response**: 503 Service Unavailable when circuit breaker is open
+- **Response Codes**: 200 (success), 408 (timeout), 503 (circuit breaker open)
 
 ---
 
@@ -551,6 +707,15 @@ export default function () {
 - **Improved foreign key handling**: Reviews now use valid user_id (1-100) and book_id (1-10) ranges
 - **Enhanced error handling**: Error simulation now returns proper JSON responses with 500 status codes
 - **Comprehensive testing**: All scenarios (read, write, performance, error) now have 100% success rates
+
+### 🔧 TypeScript & Schema Fixes (Step 2.2 Completion)
+
+- **Fixed Fastify Schema Compatibility**: Removed OpenAPI-specific properties (`summary`, `description`, `tags`) from route schemas
+- **Resolved Map Iteration Issues**: Changed `circuitBreakers.entries()` to `circuitBreakers.forEach()` for ES5 compatibility
+- **TypeScript Build Success**: All compilation errors resolved, clean build achieved
+- **Route Handler Types**: Proper generic types added for request body and response validation
+- **Circuit Breaker Enhancement**: Improved error-safe iteration through circuit breaker states
+- **Code Quality Improvements**: Template literals, proper exponential notation, cleaner conditionals
 
 ### 🎯 Test Results (Latest Run)
 

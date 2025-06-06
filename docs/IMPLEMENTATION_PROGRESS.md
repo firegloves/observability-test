@@ -20,9 +20,6 @@ This document tracks the implementation progress of the observability testing ap
 - [ ] 3.2 Multi-step operations (review creation → book update)
 - [ ] 3.3 Error correlation in traces
 
-### **Step 4: Load Testing**
-- [X] 4.1 Multiple concurrent users simulation ✅
-
 ### **Step 5: Monitoring & Validation**
 - [ ] 5.1 Esempio dashboard configurations per entrambe le piattaforme
 - [ ] 5.2 Alert rules basate su SLI/SLO
