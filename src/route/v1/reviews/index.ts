@@ -39,6 +39,15 @@ const reviewDurationHistogram = getMeterHistogram(
 	"Duration to create a review in seconds",
 );
 
+const multiStepCounter = getMeterCounter(
+	"multi_step_review_book_update_requests_total",
+	"Total number of multi-step review+book update operations",
+);
+const multiStepErrorCounter = getMeterCounter(
+	"multi_step_review_book_update_errors_total",
+	"Total number of errors in multi-step review+book update operations",
+);
+
 const SUCCESS_REVIEW_RESPONSE_SCHEMA = GENERIC_SUCCESS_RESPONSE_SCHEMA.extend({
 	data: REVIEW_SCHEMA,
 });
@@ -154,12 +163,16 @@ const route: FastifyPluginAsync = async (fastify) => {
 		},
 		async (request, reply): Promise<CreateAndUpdateBookResponse> => {
 			const { book_id, user_id, rating, comment } = request.body;
+			multiStepCounter.add(1, { route: "/reviews/create-and-update-book" });
 			const useCase: CreateReviewAndUpdateBookUseCase = request.diScope.resolve(
 				"createReviewAndUpdateBookUseCase",
 			);
 			try {
 				const result = await useCase.execute(book_id, user_id, rating, comment);
 				if (result.isErr()) {
+					multiStepErrorCounter.add(1, {
+						route: "/reviews/create-and-update-book",
+					});
 					request.log.error({
 						error: result.unwrapErr(),
 						input: { book_id, user_id, rating, comment },
@@ -171,6 +184,9 @@ const route: FastifyPluginAsync = async (fastify) => {
 				reply.status(200);
 				return { success: true, data: result.unwrap() };
 			} catch (error) {
+				multiStepErrorCounter.add(1, {
+					route: "/reviews/create-and-update-book",
+				});
 				request.log.error(
 					{
 						err: error,
