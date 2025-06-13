@@ -21,7 +21,7 @@ This document tracks the implementation progress of the observability testing ap
 - [ ] 3.3 Error correlation in traces
 
 ### **Step 5: Monitoring & Validation**
-- [ ] 5.1 Esempio dashboard configurations per entrambe le piattaforme
+- [ ] 5.1 Example dashboard configurations for both platforms (in progress)
 - [ ] 5.2 Alert rules basate su SLI/SLO
 - [ ] 5.3 Testing playbook per verificare entrambi i sistemi
 
@@ -425,6 +425,23 @@ Each implemented endpoint generates specific data for SignOz vs GCP comparison:
 - Filter traces by error type or message for targeted debugging
 - Correlate error logs with specific traces and spans for root cause analysis
 - Build dashboards showing error rates and most common error types/steps
+
+---
+
+### Step 5.1 - Example Dashboard Configurations (fc/observability-051)
+
+**Status:** In progress
+
+#### Implementation Details:
+- Add example dashboard configuration files for SignOz and GCP
+- Provide importable JSON/YAML and/or screenshots
+- Document how to import and use dashboards for observability analysis
+
+#### Files:
+- `docs/dashboards/signoz-example-dashboard.json`
+- `docs/dashboards/gcp-example-dashboard.json`
+- `README.md` (Dashboards section)
+- `load-tests/README.md` (link to dashboards)
 
 ---
 

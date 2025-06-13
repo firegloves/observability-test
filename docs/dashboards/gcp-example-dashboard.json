@@ -1,0 +1,65 @@
+{
+	"displayName": "Observability Test - Multi-step Review & Book Update",
+	"widgets": [
+		{
+			"title": "Request Rate (RPS)",
+			"xyChart": {
+				"dataSets": [
+					{
+						"timeSeriesQuery": {
+							"timeSeriesFilter": {
+								"filter": "metric.type=\"custom.googleapis.com/multi_step_review_book_update_requests_total\"",
+								"aggregation": {
+									"perSeriesAligner": "ALIGN_RATE",
+									"alignmentPeriod": "60s"
+								}
+							}
+						}
+					}
+				]
+			}
+		},
+		{
+			"title": "Error Rate",
+			"xyChart": {
+				"dataSets": [
+					{
+						"timeSeriesQuery": {
+							"timeSeriesFilter": {
+								"filter": "metric.type=\"custom.googleapis.com/multi_step_review_book_update_errors_total\"",
+								"aggregation": {
+									"perSeriesAligner": "ALIGN_RATE",
+									"alignmentPeriod": "60s"
+								}
+							}
+						}
+					}
+				]
+			}
+		},
+		{
+			"title": "Latency (p95)",
+			"xyChart": {
+				"dataSets": [
+					{
+						"timeSeriesQuery": {
+							"timeSeriesFilter": {
+								"filter": "metric.type=\"custom.googleapis.com/multi_step_review_book_update_duration_seconds\"",
+								"aggregation": {
+									"perSeriesAligner": "ALIGN_PERCENTILE_95",
+									"alignmentPeriod": "300s"
+								}
+							}
+						}
+					}
+				]
+			}
+		},
+		{
+			"title": "Recent Multi-step Traces",
+			"logsPanel": {
+				"filter": "resource.type=\"gce_instance\" AND jsonPayload.operation=\"MultiStepReviewBookUpdate\" AND severity=\"ERROR\""
+			}
+		}
+	]
+}
