@@ -22,7 +22,7 @@ This document tracks the implementation progress of the observability testing ap
 
 ### **Step 5: Monitoring & Validation**
 - [ ] 5.1 Example dashboard configurations for both platforms (in progress)
-- [ ] 5.2 Alert rules basate su SLI/SLO
+- [~] 5.2 Alert rules based on SLI/SLO (in progress)
 - [ ] 5.3 Testing playbook per verificare entrambi i sistemi
 
 ### **Step 4: Load Testing Infrastructure**
@@ -442,6 +442,23 @@ Each implemented endpoint generates specific data for SignOz vs GCP comparison:
 - `docs/dashboards/gcp-example-dashboard.json`
 - `README.md` (Dashboards section)
 - `load-tests/README.md` (link to dashboards)
+
+---
+
+### Step 5.2 - Alert Rules Based on SLI/SLO (fc/observability-052)
+
+**Status:** In progress
+
+#### Implementation Details:
+- Add example alert rule configuration files for SignOz and GCP
+- Provide YAML/JSON for importable alert rules
+- Document how to import and use alerts for SLI/SLO monitoring
+
+#### Files:
+- `docs/alerts/signoz-alerts.yaml`
+- `docs/alerts/gcp-alerts.json`
+- `README.md` (Alerts section)
+- `load-tests/README.md` (link to alerts)
 
 ---
 

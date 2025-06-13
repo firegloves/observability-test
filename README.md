@@ -297,3 +297,22 @@ Example dashboard configurations are provided for both SignOz and Google Cloud P
 - **GCP**: Import the JSON file in Cloud Monitoring > Dashboards > Create/Import
 
 These dashboards help teams monitor SLI/SLOs, error rates, latency, and trace correlation for the most critical business operations.
+
+## Alerts
+
+Example alert rule configurations are provided for both SignOz and Google Cloud Platform (GCP) to monitor SLI/SLOs for the multi-step review+book update operation.
+
+- **Location**: `docs/alerts/`
+  - `signoz-alerts.yaml`: Importable alert rules for SignOz
+  - `gcp-alerts.json`: Importable alerting policies for GCP Cloud Monitoring
+
+### Main Alert Conditions
+- **High Error Rate**: Triggers if error rate >2% in the last 5 minutes
+- **High p95 Latency**: Triggers if p95 latency >500ms in the last 5 minutes
+- **No Requests**: Triggers if no requests are detected in the last 5 minutes (availability drop)
+
+### How to Use
+- **SignOz**: Import the YAML file via the SignOz alert rules import feature
+- **GCP**: Import the JSON file in Cloud Monitoring > Alerting > Create/Import Policy
+
+These alerts help teams proactively monitor reliability and performance SLOs for critical business operations.
