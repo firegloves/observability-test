@@ -26,6 +26,8 @@ import {
 } from "../../../domain/entity/Review";
 import type { CreateReviewError } from "../../../domain/use-case/CreateReviewUseCase";
 import type { CreateReviewUseCase } from "../../../domain/use-case/CreateReviewUseCase";
+import { CreateReviewAndUpdateBookUseCase } from "../../../domain/use-case/CreateReviewAndUpdateBookUseCase";
+import type { CreateReviewAndUpdateBookError } from "../../../domain/use-case/CreateReviewAndUpdateBookUseCase";
 
 const reviewCounter = getMeterCounter(
 	"reviews_created_total",
@@ -46,6 +48,22 @@ const REVIEW_RESPONSE_SCHEMA = z.discriminatedUnion("success", [
 	GENERIC_ERROR_RESPONSE_SCHEMA,
 ]);
 type ReviewResponse = z.infer<typeof REVIEW_RESPONSE_SCHEMA>;
+
+const CREATE_AND_UPDATE_BOOK_SCHEMA = CREATE_REVIEW_SCHEMA;
+const SUCCESS_CREATE_AND_UPDATE_BOOK_RESPONSE_SCHEMA =
+	GENERIC_SUCCESS_RESPONSE_SCHEMA.extend({
+		data: z.object({
+			review: REVIEW_SCHEMA,
+			updatedBook: BOOK_SCHEMA,
+		}),
+	});
+const CREATE_AND_UPDATE_BOOK_RESPONSE_SCHEMA = z.discriminatedUnion("success", [
+	SUCCESS_CREATE_AND_UPDATE_BOOK_RESPONSE_SCHEMA,
+	GENERIC_ERROR_RESPONSE_SCHEMA,
+]);
+type CreateAndUpdateBookResponse = z.infer<
+	typeof CREATE_AND_UPDATE_BOOK_RESPONSE_SCHEMA
+>;
 
 const route: FastifyPluginAsync = async (fastify) => {
 	const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -119,6 +137,50 @@ const route: FastifyPluginAsync = async (fastify) => {
 					success: false,
 					error: "Internal server error",
 				};
+			}
+		},
+	);
+
+	app.post(
+		"/create-and-update-book",
+		{
+			schema: {
+				body: CREATE_AND_UPDATE_BOOK_SCHEMA,
+				response: {
+					200: CREATE_AND_UPDATE_BOOK_RESPONSE_SCHEMA,
+					500: GENERIC_ERROR_RESPONSE_SCHEMA,
+				},
+			},
+		},
+		async (request, reply): Promise<CreateAndUpdateBookResponse> => {
+			const { book_id, user_id, rating, comment } = request.body;
+			const useCase: CreateReviewAndUpdateBookUseCase = request.diScope.resolve(
+				"createReviewAndUpdateBookUseCase",
+			);
+			try {
+				const result = await useCase.execute(book_id, user_id, rating, comment);
+				if (result.isErr()) {
+					request.log.error({
+						error: result.unwrapErr(),
+						input: { book_id, user_id, rating, comment },
+						msg: "#### Multi-step use-case returned error",
+					});
+					reply.status(500);
+					return { success: false, error: result.unwrapErr() };
+				}
+				reply.status(200);
+				return { success: true, data: result.unwrap() };
+			} catch (error) {
+				request.log.error(
+					{
+						err: error,
+						body: request.body,
+						msg: "#### Exception in multi-step endpoint",
+					},
+					"Failed multi-step review+book update",
+				);
+				reply.status(500);
+				return { success: false, error: "Internal server error" };
 			}
 		},
 	);

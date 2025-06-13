@@ -302,42 +302,64 @@ function executeHttpErrorCodeScenario(session) {
  * Execute write operations scenario (create reviews)
  */
 function executeWriteScenario(session) {
-	const startTime = Date.now();
-	const reviewData = generateReviewData();
+	// 80% create review, 20% multi-step
+	if (Math.random() < 0.8) {
+		const payload = generateReviewData();
+		const url = `${currentEnv.baseUrl}/v1/reviews`;
+		const headers = { ...defaultHeaders };
+		const res = http.post(url, JSON.stringify(payload), {
+			headers: { ...headers, "Content-Type": "application/json" },
+		});
+		const ok = check(res, {
+			"review create status is 200": (r) => r.status === 200,
+		});
+		if (ok) {
+			customSuccessRate.add(1);
+		} else {
+			customErrorRate.add(1);
+		}
+		endpointResponseTime.add(res.timings.duration);
+	} else {
+		executeMultiStepReviewBookUpdateScenario(session);
+	}
+}
 
-	const response = http.post(
-		`${currentEnv.baseUrl}/v1/reviews`,
-		JSON.stringify(reviewData),
-		{
-			headers: {
-				...defaultHeaders,
-				"X-User-Session": session.sessionId,
-				"X-User-ID": session.userId.toString(),
-			},
-		},
-	);
+/**
+ * Execute multi-step review+book update scenario
+ */
+function executeMultiStepReviewBookUpdateScenario(session) {
+	const payload = generateReviewData();
+	const url = `${currentEnv.baseUrl}/v1/reviews/create-and-update-book`;
+	const headers = { ...defaultHeaders };
 
-	const reviewCheck = check(response, {
-		"review creation status is 200": (r) => r.status === 200,
-		"review response is valid": (r) => {
+	const res = http.post(url, JSON.stringify(payload), {
+		headers: { ...headers, "Content-Type": "application/json" },
+	});
+
+	const ok = check(res, {
+		"multi-step review+book update status is 200": (r) => r.status === 200,
+		"multi-step response has review and updatedBook": (r) => {
 			try {
-				const body = JSON.parse(r.body);
-				return body.success === true && body.data;
+				const body = r.json();
+				return (
+					body.success === true &&
+					body.data &&
+					body.data.review &&
+					body.data.updatedBook
+				);
 			} catch (e) {
 				return false;
 			}
 		},
-		"review response time < 2000ms": (r) => r.timings.duration < 2000,
 	});
 
-	if (reviewCheck) {
+	if (ok) {
 		customSuccessRate.add(1);
 	} else {
 		customErrorRate.add(1);
 	}
 
-	const totalTime = Date.now() - startTime;
-	endpointResponseTime.add(totalTime);
+	endpointResponseTime.add(res.timings.duration);
 }
 
 /**

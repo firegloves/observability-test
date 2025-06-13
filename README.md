@@ -136,6 +136,46 @@ Replace `PORT` with the actual port the server is running on (default is `8080`)
 
 Additionally, when `NODE_ENV` is not set to `production`, the OpenAPI specification file is automatically generated and saved to the path specified by the `OPENAPI_SPEC_FILE_DESTINATION` environment variable (default: `generated/openapi-schema.json`).
 
+### Multi-step Review + Book Update
+
+- **Endpoint**: `POST /v1/reviews/create-and-update-book`
+- **Description**: Creates a review and updates the associated book (average_rating, review_count) in a single atomic operation. Tracing: parent span for the operation, child spans for each step, custom attributes propagation.
+- **Request Example**:
+```json
+{
+  "book_id": 1,
+  "user_id": 1,
+  "rating": 5,
+  "comment": "Test multi-step"
+}
+```
+- **Response Example**:
+```json
+{
+  "success": true,
+  "data": {
+    "review": { ... },
+    "updatedBook": { ... }
+  }
+}
+```
+- **Observability Data Generated**:
+  - **Metrics**:
+    - `multi_step_review_book_update_requests_total` (Counter): Total multi-step operations
+    - `multi_step_review_book_update_duration_seconds` (Histogram): Total operation duration
+    - `review_creation_duration_seconds` (Histogram): Review creation step
+    - `book_update_duration_seconds` (Histogram): Book update step
+  - **Tracing**:
+    - Parent span: `MultiStepReviewBookUpdate`
+    - Child spans: `CreateReview`, `UpdateBook`
+    - Custom attributes: `user.id`, `book.id`, `operation.type`, `step`, `review.rating`, `review.id`, `book.average_rating`, `book.review_count`
+    - Span events: `review_created`, `book_updated`, `multi_step_completed`, error events
+    - Trace correlation: parent-child relationship, error propagation
+  - **Logging**:
+    - Structured logs for each step with context (user, book, operation)
+    - Error logs with full context and trace correlation
+    - Success logs with review and book data
+
 ## Load Testing with k6
 
 This project includes a comprehensive **k6 load testing infrastructure** designed to generate realistic observability data for testing monitoring platforms like SignOz and GCP.

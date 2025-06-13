@@ -15,6 +15,7 @@ import { PostgresReviewRepo } from "../repository/ReviewRepo/PostgresReviewRepo"
 import { CreateReviewUseCase } from "../domain/use-case/CreateReviewUseCase";
 import { DatabaseHeavyUseCase } from "../domain/use-case/DatabaseHeavyUseCase";
 import { PostgresDatabasePerformanceRepo } from "../repository/DatabasePerformanceRepo/PostgresDatabasePerformanceRepo";
+import { CreateReviewAndUpdateBookUseCase } from "../domain/use-case/CreateReviewAndUpdateBookUseCase";
 
 export const container: AwilixContainer<AppContainer> = createContainer({
 	injectionMode: InjectionMode.PROXY,
@@ -51,5 +52,12 @@ export default fp(async (fastify: FastifyInstance) => {
 		performanceRepo: asFunction(
 			() => new PostgresDatabasePerformanceRepo(pgDecorator, fastify.log),
 		).scoped(),
+		createReviewAndUpdateBookUseCase: asClass(
+			CreateReviewAndUpdateBookUseCase,
+		).inject(() => ({
+			reviewRepo: container.resolve("reviewRepo"),
+			bookRepo: container.resolve("bookRepo"),
+			logger: fastify.log,
+		})),
 	});
 });

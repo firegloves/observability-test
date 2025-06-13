@@ -130,6 +130,27 @@ k6 run --stage 1m:5 --stage 3m:15 --stage 2m:25 --stage 2m:10 --stage 1m:0 load-
 4. **Peak steady**: 5 min @ 50 users
 5. **Ramp down**: 2 min → 0 users
 
+#### **Write Operations**
+- **Endpoints**: `POST /v1/reviews` (80%), `POST /v1/reviews/create-and-update-book` (20%)
+- **Scenario**: 80% delle write creano solo una review, 20% eseguono la multi-step (review + book update con tracing parent/child span)
+- **Checks**: status 200, struttura risposta, generazione dati di tracing/metriche
+- **Observability Data Generated**:
+  - **Metrics**:
+    - `multi_step_review_book_update_requests_total` (Counter)
+    - `multi_step_review_book_update_duration_seconds` (Histogram)
+    - `review_creation_duration_seconds` (Histogram)
+    - `book_update_duration_seconds` (Histogram)
+  - **Tracing**:
+    - Parent span: `MultiStepReviewBookUpdate`
+    - Child spans: `CreateReview`, `UpdateBook`
+    - Custom attributes: `user.id`, `book.id`, `operation.type`, `step`, `review.rating`, `review.id`, `book.average_rating`, `book.review_count`
+    - Span events: `review_created`, `book_updated`, `multi_step_completed`, error events
+    - Trace correlation: parent-child relationship, error propagation
+  - **Logging**:
+    - Structured logs for each step with context (user, book, operation)
+    - Error logs with full context and trace correlation
+    - Success logs with review and book data
+
 ## 📊 Generated Data Types
 
 ### **Performance Metrics**

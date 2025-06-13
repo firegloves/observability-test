@@ -41,4 +41,12 @@ export class PostgresReviewRepo implements ReviewRepo {
 			throw error;
 		}
 	}
+
+	async findByBookId(bookId: number): Promise<Review[]> {
+		const res = await this.db.query(
+			"SELECT * FROM reviews WHERE book_id = $1 ORDER BY id DESC",
+			[bookId],
+		);
+		return (res.rows || []).map((row) => REVIEW_SCHEMA.parse(row));
+	}
 }

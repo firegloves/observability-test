@@ -11,7 +11,9 @@ CREATE TABLE books (
   title TEXT UNIQUE NOT NULL,
   author TEXT NOT NULL,
   published_at DATE,
-  created_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP DEFAULT NOW(),
+  average_rating FLOAT DEFAULT 0,
+  review_count INTEGER DEFAULT 0
 );
 
 CREATE TABLE reviews (

@@ -55,6 +55,14 @@
                           "created_at": {
                             "type": "string",
                             "format": "date-time"
+                          },
+                          "average_rating": {
+                            "type": "number",
+                            "default": 0
+                          },
+                          "review_count": {
+                            "type": "number",
+                            "default": 0
                           }
                         },
                         "required": [
@@ -310,6 +318,198 @@
                     "error"
                   ],
                   "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reviews/create-and-update-book": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "number"
+                  },
+                  "book_id": {
+                    "type": "number"
+                  },
+                  "rating": {
+                    "type": "number"
+                  },
+                  "comment": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                },
+                "required": [
+                  "user_id",
+                  "book_id",
+                  "rating",
+                  "comment"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "success": {
+                          "type": "boolean",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "review": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "number"
+                                },
+                                "user_id": {
+                                  "type": "number"
+                                },
+                                "book_id": {
+                                  "type": "number"
+                                },
+                                "rating": {
+                                  "type": "number"
+                                },
+                                "comment": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "created_at": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "user_id",
+                                "book_id",
+                                "rating",
+                                "comment",
+                                "created_at"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "updatedBook": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "number"
+                                },
+                                "title": {
+                                  "type": "string"
+                                },
+                                "author": {
+                                  "type": "string"
+                                },
+                                "published_at": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "created_at": {
+                                  "type": "string",
+                                  "format": "date-time"
+                                },
+                                "average_rating": {
+                                  "type": "number",
+                                  "default": 0
+                                },
+                                "review_count": {
+                                  "type": "number",
+                                  "default": 0
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "title",
+                                "author",
+                                "published_at",
+                                "created_at"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "review",
+                            "updatedBook"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "success",
+                        "data"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "success": {
+                          "type": "boolean",
+                          "enum": [
+                            false
+                          ]
+                        },
+                        "error": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "success",
+                        "error"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
                 }
               }
             }

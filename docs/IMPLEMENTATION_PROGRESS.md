@@ -17,7 +17,7 @@ This document tracks the implementation progress of the observability testing ap
 
 ### **Step 3: Enhanced Tracing**
 - [X] 3.1 Custom span attributes (user_id, operation_type) ✅
-- [ ] 3.2 Multi-step operations (review creation → book update)
+- [X] 3.2 Multi-step operations (review creation → book update) ✅
 - [ ] 3.3 Error correlation in traces
 
 ### **Step 5: Monitoring & Validation**
