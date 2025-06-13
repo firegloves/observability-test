@@ -1,0 +1,58 @@
+{
+	"policies": [
+		{
+			"displayName": "High Error Rate - Multi-step Review & Book Update",
+			"conditions": [
+				{
+					"displayName": "Error rate >2% (5m)",
+					"conditionThreshold": {
+						"filter": "metric.type=\"custom.googleapis.com/multi_step_review_book_update_errors_total\" / metric.type=\"custom.googleapis.com/multi_step_review_book_update_requests_total\"",
+						"comparison": "COMPARISON_GT",
+						"thresholdValue": 0.02,
+						"duration": "300s"
+					}
+				}
+			],
+			"combiner": "OR",
+			"enabled": true
+		},
+		{
+			"displayName": "High p95 Latency - Multi-step Review & Book Update",
+			"conditions": [
+				{
+					"displayName": "p95 latency >500ms (5m)",
+					"conditionThreshold": {
+						"filter": "metric.type=\"custom.googleapis.com/multi_step_review_book_update_duration_seconds\"",
+						"comparison": "COMPARISON_GT",
+						"thresholdValue": 0.5,
+						"duration": "300s",
+						"aggregations": [
+							{
+								"alignmentPeriod": "300s",
+								"perSeriesAligner": "ALIGN_PERCENTILE_95"
+							}
+						]
+					}
+				}
+			],
+			"combiner": "OR",
+			"enabled": true
+		},
+		{
+			"displayName": "No Requests - Multi-step Review & Book Update",
+			"conditions": [
+				{
+					"displayName": "No requests in last 5m",
+					"conditionThreshold": {
+						"filter": "metric.type=\"custom.googleapis.com/multi_step_review_book_update_requests_total\"",
+						"comparison": "COMPARISON_LT",
+						"thresholdValue": 0.01,
+						"duration": "300s"
+					}
+				}
+			],
+			"combiner": "OR",
+			"enabled": true
+		}
+	]
+}
