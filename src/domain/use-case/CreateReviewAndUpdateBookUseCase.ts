@@ -72,6 +72,16 @@ export class CreateReviewAndUpdateBookUseCase {
 					const err = e instanceof Error ? e : new Error(String(e));
 					this.logger.error("[MultiStep] Error creating review", err);
 					parentSpan.recordException(err);
+					parentSpan.addEvent("error", {
+						error_type: err.name,
+						error_message: err.message,
+						error_stack: err.stack,
+						step: "create_review",
+						input: JSON.stringify({ book_id, user_id, rating, comment }),
+					});
+					parentSpan.setAttribute("error.step", "create_review");
+					parentSpan.setAttribute("error.type", err.name);
+					parentSpan.setAttribute("error.message", err.message);
 					return Err("generic-error");
 				}
 
@@ -101,6 +111,16 @@ export class CreateReviewAndUpdateBookUseCase {
 					const err = e instanceof Error ? e : new Error(String(e));
 					this.logger.error("[MultiStep] Error updating book", err);
 					parentSpan.recordException(err);
+					parentSpan.addEvent("error", {
+						error_type: err.name,
+						error_message: err.message,
+						error_stack: err.stack,
+						step: "update_book",
+						input: JSON.stringify({ book_id, user_id, rating, comment }),
+					});
+					parentSpan.setAttribute("error.step", "update_book");
+					parentSpan.setAttribute("error.type", err.name);
+					parentSpan.setAttribute("error.message", err.message);
 					return Err("book-not-found");
 				}
 			},

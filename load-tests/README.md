@@ -144,11 +144,12 @@ k6 run --stage 1m:5 --stage 3m:15 --stage 2m:25 --stage 2m:10 --stage 1m:0 load-
     - Parent span: `MultiStepReviewBookUpdate`
     - Child spans: `CreateReview`, `UpdateBook`
     - Custom attributes: `user.id`, `book.id`, `operation.type`, `step`, `review.rating`, `review.id`, `book.average_rating`, `book.review_count`
-    - Span events: `review_created`, `book_updated`, `multi_step_completed`, error events
-    - Trace correlation: parent-child relationship, error propagation
+    - **Span events**: `review_created`, `book_updated`, `multi_step_completed`, `error` (with detailed attributes)
+    - **Trace correlation**: parent-child relationship, error propagation, ability to follow the full operation and its errors
+    - **Error correlation**: each error generates an `error` event and specific attributes, filterable and correlatable in traces
   - **Logging**:
     - Structured logs for each step with context (user, book, operation)
-    - Error logs with full context and trace correlation
+    - Error logs with full context, trace id, and span id for correlation
     - Success logs with review and book data
 
 ## 📊 Generated Data Types

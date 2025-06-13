@@ -406,4 +406,26 @@ Each implemented endpoint generates specific data for SignOz vs GCP comparison:
 
 ---
 
+### ✅ Step 3.3 - Error Correlation in Traces
+
+#### Observability Data Generated:
+- **Tracing**:
+  - **Span events**: `review_created`, `book_updated`, `multi_step_completed`, `error` (with detailed attributes: `error_type`, `error_message`, `error_stack`, `step`, `input`)
+  - **Trace correlation**: parent-child relationship between spans, error propagation, ability to follow the entire operation and its errors
+  - **Error correlation**: each error generates an `error` event and specific attributes (`error.step`, `error.type`, `error.message`), filterable and correlatable in traces
+- **Metrics**:
+  - `multi_step_review_book_update_errors_total` (Counter): total errors in multi-step operations (can be derived from error events)
+  - Error rate per step (`create_review`, `update_book`) via span attributes
+- **Logging**:
+  - Structured error logs with trace id and span id for direct correlation with traces
+  - Full error context (input, step, type, message) in logs and trace events
+
+#### Example Use Cases:
+- Quickly identify which step (review creation or book update) is most error-prone
+- Filter traces by error type or message for targeted debugging
+- Correlate error logs with specific traces and spans for root cause analysis
+- Build dashboards showing error rates and most common error types/steps
+
+---
+
 *Last updated: 2025-06-06* 
